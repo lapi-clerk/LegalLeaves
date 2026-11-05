@@ -1,0 +1,21 @@
+# 依存・ビルド成果物
+node_modules/
+dist/
+# build/icon.ico はブランドの素材なのでコミットする（元画像は assets/brand-icon-source.png）
+
+# テスト・作業用の出力（依頼者資料・生成物を誤ってコミットしないため）
+# 出力テスト/ にはデモ素材や実データ由来のPDF・音声・動画が入り得るのでリポジトリに含めない。
+出力テスト/
+.tmp-*/
+tmp/
+
+# ローカルの手動テストチェックリスト（バージョンごとの作業メモ）
+docs/*-test-checklist.md
+
+# テスト用フィクスチャの中間生成物（.g4 の元TIFF）は不要
+test/fixtures/*.tif
+
+# Python 版（py/）の仮想環境とビルド成果物
+py/.venv/
+py/build/
+__pycache__/

@@ -1,0 +1,14 @@
+# LegalLeaves（Python＋pywebview 版）の部品。版は固定する（動作を確かめた組み合わせ）。
+# pywebview は内部の _dnd_state（ドロップしたファイルの場所）を使っているので、上げるときは
+# ドラッグ＆ドロップを必ず確かめること（legalleaves/app.py の run を参照）。
+pywebview==6.2.1
+pythonnet==3.2.1
+clr_loader==0.3.1
+bottle==0.13.4
+proxy_tools==0.1.0
+pypdf==6.21.3
+reportlab==5.1.0
+pillow==13.0.0
+
+# 配布物を作るときだけ使う
+pyinstaller==6.22.3

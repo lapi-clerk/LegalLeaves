@@ -1,0 +1,18 @@
+{
+  "name": "legal-leaves",
+  "version": "5.2.5",
+  "description": "LegalLeaves — e裁判の書類を、軽っと整える。アプリ本体は Python（py/）。このファイルは自動テストと説明書PDF・配布物づくりの手順だけを持つ",
+  "author": "LegalLeaves",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "cd py && .venv\\Scripts\\python -m legalleaves",
+    "test": "node test/validation.test.js && node test/pdf-limits.test.js && node test/atomic-write.test.js && node test/stamp-output.test.js && node test/active-content.test.js",
+    "manual:pdf": "node build/make-manual-pdf.js",
+    "dist": "node build/make-manual-pdf.js && powershell -NoProfile -ExecutionPolicy Bypass -File py/packaging/build.ps1"
+  },
+  "devDependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "ccitt-240x120": { "width": 240, "height": 120, "blackPixels": 1891 },
+  "ccitt-6000x6000": { "width": 6000, "height": 6000, "blackPixels": 2253001 }
+}

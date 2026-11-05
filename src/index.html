@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!-- UX-25: UIフォントを同梱しGoogle Fontsへの外部参照を廃止（外部通信ゼロ・オフラインでも同一表示） -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+<title>LegalLeaves</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <div class="header-bar">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><img src="../assets/brand-logo.png" alt="LegalLeaves"></div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <div class="brand-name"><span class="bn-legal">Legal</span><span class="bn-leaves">Leaves</span></div>
+            <div class="brand-version" id="brand-version"></div>
+          </div>
+          <div class="brand-tagline">e裁判の書類を、軽っと整える。</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="ghost-button" id="help-btn" type="button">ヘルプ</button>
+        <button class="ghost-button" id="quit-btn" type="button">終了</button>
+      </div>
+    </header>
+
+    <nav class="steps" aria-label="ステップ">
+      <button class="step-button" data-step="start" type="button"><span class="step-num">1</span><span class="step-label">読み込み</span></button>
+      <button class="step-button" data-step="match" type="button"><span class="step-num">2</span><span class="step-label">照合</span></button>
+      <button class="step-button" data-step="review" type="button"><span class="step-num">3</span><span class="step-label">確認</span></button>
+      <button class="step-button" data-step="export" type="button"><span class="step-num">4</span><span class="step-label">出力</span></button>
+      <button class="step-button" data-step="done" type="button"><span class="step-num">5</span><span class="step-label">完了</span></button>
+    </nav>
+  </div>
+
+  <main class="main">
+    <div class="screen-heading">
+      <h1 id="screen-title"></h1>
+      <p id="screen-summary"></p>
+    </div>
+
+    <!-- STEP 1: 読み込み -->
+    <section class="screen" data-screen="start">
+      <!-- 下部の「照合して進む」がスクロールしないと見えない対策（下部と同期） -->
+      <div class="top-nav-row">
+        <span class="hint-text" id="proceed-hint-top"></span>
+        <span class="proceed-actions">
+          <!-- 少数の追加（後から甲1の2を出す等）向け: AIの整理データなしで、ファイル名の号証番号を使って進む -->
+          <button class="ghost-button" id="no-ai-top-btn" type="button" hidden title="ファイル名の先頭の号証番号（例: 甲1の2_領収書.pdf）を使って進みます。標目などは確認画面で入力します">AIを使わずに進む</button>
+          <button class="primary-button small-primary" id="to-match-top-btn" type="button" disabled>照合して進む</button>
+        </span>
+      </div>
+      <label class="mode-toggle">
+        <input type="checkbox" id="rename-only-checkbox" />
+        <span class="mode-toggle-text">
+          <span class="mode-toggle-title">リネーム＋メタデータ削除（スタンプ・結合なし）</span>
+          <span class="mode-toggle-sub">AIの整理データがあれば提出用の名前に変えてコピー。<strong>AIデータが無くても使えます</strong>（元のファイル名のままメタデータだけ削除。Word等のOffice文書はPDFに変換して、事務所名・個人名が入りうるメタデータを削除）。すでに押印・完成済みのファイルや、単にメタデータを消したいときに。</span>
+        </span>
+      </label>
+      <div class="two-col">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>提出ファイル</h2>
+            <div class="heading-right">
+              <!-- FB-1凍結（2026-07-15）: 案件ファイル（作業の保存・再開）は、作業データが無意識に
+                   PCへ残ることが事務所ポリシー上望ましくないため無効化。コードは将来の再開用に保持 -->
+              <button class="clear-files-btn" id="open-case-btn" type="button" hidden title="前回出力時にアプリ内へ自動保存された案件ファイルを開いて、番号の挿入・修正・再出力ができます">前回の作業を開く</button>
+              <button class="clear-files-btn" id="clear-files-btn" type="button" hidden>すべてクリア</button>
+              <span class="pill pill-accent" id="file-count-pill">0件</span>
+            </div>
+          </div>
+
+          <div class="dropzone" id="pdf-dropzone">
+            <div class="dropzone-badge">PDF・画像・Office・音声動画</div>
+            <div class="dropzone-title">ここにファイルをドラッグ＆ドロップ</div>
+            <div class="dropzone-sub">PDF / 画像 / Word・Excel・PowerPoint / RTF / 音声・動画 に対応（音声・動画はリネームのみ）</div>
+            <button class="primary-button dropzone-select" id="select-files-btn" type="button">ファイルを選択</button>
+          </div>
+
+          <div class="warn-banner inline unsupported-warn" id="unsupported-warning">
+            <span class="pill pill-warn-solid pill-nowrap">提出不可</span>
+            <div class="warn-text" id="unsupported-warning-text"></div>
+            <button class="warn-dismiss" id="unsupported-warning-close" type="button" aria-label="閉じる">×</button>
+          </div>
+
+          <!-- UX-42: mintsはA4/A3のみ。A3を超えるPDF（大きな図面等）は出力時にA3へ縮小するが、
+               縮小で読み取りに支障が出る場合の選択肢（紙提出・記録外）を読み込み時に案内する。 -->
+          <div class="warn-banner inline oversize-warn" id="oversize-warning">
+            <span class="pill pill-warn-solid pill-nowrap">A3超</span>
+            <div class="warn-text" id="oversize-warning-text"></div>
+          </div>
+
+          <div class="file-list" id="file-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2 class="panel-title-solo">AIの整理データ</h2>
+          <div class="prompt-copy">
+            <button class="prompt-copy-btn" id="copy-prompt-btn" type="button">AI用プロンプトをコピー</button>
+            <span class="prompt-copy-hint">①コピー → ②AIに貼り付けてファイル添付（多いときは分けて送り最後に「完成」）→ ③最終JSONを下の欄へ</span>
+          </div>
+          <!-- UX-41: 実ファイル名の一覧をコピー。AIは添付の内部参照名（[source: N]）に引っ張られ、
+               実ファイル名を書けず勝手に甲へ振り直すことがある。実名リストをテキストで直接渡すと確実。
+               プロンプトをGem等に登録済みで毎回コピーしない運用でも、これだけ貼ればよい。 -->
+          <div class="prompt-copy" id="copy-names-row" hidden>
+            <button class="ghost-button copy-names-btn" id="copy-names-btn" type="button">ファイル名リストをコピー</button>
+            <span class="prompt-copy-hint">ファイル添付時にこれも貼ると、AIがファイル名を正しく認識します（AIが元のファイル名を読めない対策。プロンプトをGem等に登録済みなら、これだけ貼ればOK）。</span>
+          </div>
+          <div class="firm-notes-row">
+            <button class="ghost-button firm-notes-btn" id="firm-notes-btn" type="button">事務所の書き方メモを編集</button>
+            <span class="firm-notes-hint" id="firm-notes-hint">立証趣旨などの事務所独自の工夫をプロンプト末尾に自動で足します</span>
+          </div>
+          <!-- SEC-C2/C12: 外部AIへの送信・事務所メモの同梱・クリップボード履歴に関する常設注意 -->
+          <p class="ai-caution">※ 添付するファイルは外部のAIサービス（Gemini・ChatGPT等）に送信されます。事務所で認められたサービス・アカウントを利用し、学習利用や保存期間の設定をご確認ください。コピーするプロンプトには「事務所の書き方メモ」の内容も含まれます。</p>
+          <!-- UX-3: 正常受領時は生JSONを畳み、受領カードで「受け取れた」ことを明確にする -->
+          <div class="ai-receipt" id="ai-receipt" hidden>
+            <div class="ai-receipt-head">✓ 整理データを受け取りました</div>
+            <div class="ai-receipt-sub" id="ai-receipt-sub"></div>
+            <div class="ai-receipt-actions">
+              <button class="conflict-btn" id="ai-receipt-show" type="button">内容を見る</button>
+              <button class="conflict-btn" id="ai-receipt-clear" type="button">貼り直す</button>
+            </div>
+          </div>
+          <!-- UX-38: 縦に短いウィンドウでも押せるよう、貼り付けボタンはテキスト欄の上に置く
+               （大きなテキスト欄の下だと縮小時に画面外へ隠れてしまう） -->
+          <button class="paste-button" id="paste-btn" type="button">クリップボードから貼り付け</button>
+          <textarea id="ai-textarea" class="ai-textarea" spellcheck="false" placeholder="AIが出力した整理データ(JSON)を貼り付けてください"></textarea>
+          <!-- UX-15: JSONエラーは他の警告と同じバナー方式（赤文字だけでは見逃す） -->
+          <div class="ai-error-banner" id="ai-json-error" role="alert" hidden>
+            <span class="pill pill-warn-solid pill-nowrap">エラー</span>
+            <span class="ai-error-text" id="ai-json-error-text"></span>
+          </div>
+        </section>
+      </div>
+
+      <div class="footer-row">
+        <span class="hint-text" id="proceed-hint"></span>
+        <span class="proceed-actions">
+          <button class="ghost-button" id="no-ai-btn" type="button" hidden title="ファイル名の先頭の号証番号（例: 甲1の2_領収書.pdf）を使って進みます。標目などは確認画面で入力します">AIを使わずに進む</button>
+          <button class="primary-button proceed-button" id="to-match-btn" type="button" disabled>照合して進む</button>
+        </span>
+      </div>
+    </section>
+
+    <!-- STEP 2: 照合 -->
+    <section class="screen" data-screen="match">
+      <div class="top-nav-row">
+        <!-- FB-16③: 下部の「戻る」と同じ操作を上部にも（スクロール不要で戻れるように） -->
+        <button class="ghost-button" id="match-back-top-btn" type="button">戻る</button>
+        <button class="primary-button small-primary" id="match-next-top-btn" type="button">確認へ進む</button>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <strong id="metric-filecount">0</strong>
+          <span>読み込んだファイル</span>
+        </div>
+        <div class="metric-card">
+          <strong id="metric-matchcount">0</strong>
+          <span>AIデータとの一致</span>
+        </div>
+        <div class="metric-card metric-accent">
+          <strong id="metric-warncount">0</strong>
+          <span>要確認</span>
+        </div>
+        <div class="metric-card">
+          <strong id="metric-deletecount">0</strong>
+          <span>削除予定のPDF情報（作成者名など）</span>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2 class="panel-title-solo">照合結果</h2>
+
+        <div class="warn-banner" id="warn-banner" hidden>
+          <span class="pill pill-warn-solid" id="warn-count-badge">確認 0件</span>
+          <span class="warn-text">確認が必要なファイルがあります。次のページで内容をご確認ください。</span>
+        </div>
+        <div class="ok-banner" id="allclear-banner" hidden>
+          <span class="pill pill-ok">OK</span>
+          <span class="ok-text">確認が必要な項目はありません。このまま出力へ進めます。</span>
+        </div>
+        <div id="consistency-box"></div>
+        <div id="extra-warnings"></div>
+
+        <div class="table-scroll">
+          <div class="match-table">
+            <div class="table-head">
+              <span>状態</span><span>提出用ファイル名</span><span>元ファイル</span>
+            </div>
+            <div id="match-rows"></div>
+          </div>
+        </div>
+
+        <div class="footer-row align-right">
+          <button class="ghost-button" id="match-back-btn" type="button">戻る</button>
+          <button class="ghost-button" id="match-skip-btn" type="button" hidden>確認をスキップして出力へ</button>
+          <button class="primary-button small-primary" id="match-next-btn" type="button">確認へ進む</button>
+        </div>
+      </section>
+    </section>
+
+    <!-- STEP 3: 確認 -->
+    <section class="screen" data-screen="review">
+      <!-- 戻る／進むは他画面と同じ位置（独立した行）に置き、下のツールバー（ファイル切替・
+           一括取消などの操作ボタン群）とは意図的に分離する（詰め込みすぎで分かりにくいとの指摘対応） -->
+      <div class="top-nav-row">
+        <button class="ghost-button" id="review-back-top-btn" type="button">戻る</button>
+        <button class="primary-button small-primary" id="review-next-top-btn" type="button">出力前チェックへ</button>
+      </div>
+      <!-- 照合で対応すべきことが無く、照合画面を飛ばしてここへ来たことを知らせる -->
+      <p class="match-skip-note" id="review-match-note" hidden></p>
+      <div class="bulk-bar" id="bulk-stamp-bar" hidden>
+        <span class="bulk-text" id="bulk-stamp-text"></span>
+        <div class="bulk-actions">
+          <button class="conflict-btn" id="bulk-stamp-new" type="button">すべて新規に押す</button>
+          <button class="conflict-btn" id="bulk-stamp-done" type="button">すべて既に押印済み</button>
+        </div>
+      </div>
+      <!-- UX-31: 作成者の表記（役割名／実名）を、同じ立場の証拠すべてに一括適用する -->
+      <div class="bulk-bar" id="bulk-author-bar" hidden>
+        <span class="bulk-text" id="bulk-author-text"></span>
+        <div class="bulk-actions">
+          <button class="conflict-btn" id="bulk-author-role" type="button">すべて役割名（原告／被告等）</button>
+          <button class="conflict-btn" id="bulk-author-name" type="button">すべて実名（会社名・個人名）</button>
+        </div>
+      </div>
+      <!-- UX-37: 同じ内容の確認（チェック式）が複数あるとき、まとめて確認済みにできる -->
+      <div class="bulk-bar" id="bulk-confirm-bar" hidden>
+        <span class="bulk-text" id="bulk-confirm-text"></span>
+        <div class="bulk-actions">
+          <button class="conflict-btn" id="bulk-confirm-all" type="button">まとめて確認済みにする</button>
+        </div>
+      </div>
+      <!-- UX-34: ラベル＋操作ボタンを1行目にまとめ、チップ一覧は下段の別行にする（多ファイル時に
+           ボタンがチップの折り返し後へ孤立するのを防ぐ） -->
+      <div class="review-toolbar">
+        <div class="review-toolbar-head">
+          <span class="toolbar-label">ファイル一覧（号証番号順）</span>
+          <button class="toggle-all-button" id="toggle-all-btn" type="button">
+            <span class="toggle-all-icon" id="toggle-all-icon">+</span>
+            <span id="toggle-all-label">全件を表示</span>
+          </button>
+          <!-- UX-17: 全手動修正の一括取り消し（AIの整理データどおりに戻す） -->
+          <button class="toggle-all-button reset-all-button" id="review-reset-all-btn" type="button" title="確認画面での手動修正（証拠番号・文書名・種類・押印の選択など）をすべて取り消して、AIの整理データどおりに戻します">編集をすべて取り消す</button>
+        </div>
+        <!-- FB-21②: 号証番号順の一覧。クリックでカード切替、ドラッグで並べ替え（番号は自動で振り直し）。 -->
+        <p class="ev-list-hint">行をドラッグすると順番を入れ替えられます（証拠番号は自動で振り直されます）。<strong>別の証拠の上に重ねると、その証拠の枝番になります。</strong>枝番は同じ号証の中で並べ替えできます。<strong>枝番を号証の行の上下に出すと、枝番を解除できます。</strong></p>
+        <div class="evidence-list" id="review-list"></div>
+        <!-- FB-21②Phase2: 選択中の証拠の前／後に空き枠を割り込ませる。「これを甲3にして、前の甲3を
+             甲4に」のような割り込みを1クリックで（一覧で対象を選んでから押す）。空き枠は証拠説明書の
+             生成時に空行（●●）として出力される。ファイルにその番号を割り当てると枠は消える。 -->
+        <div class="insert-bar" id="insert-bar" hidden>
+          <span class="insert-bar-label" id="insert-bar-label">選択中の証拠に、別の証拠を割り込ませる（空き枠を作る）:</span>
+          <div class="insert-bar-actions">
+            <button class="conflict-btn" id="rf-insert-before" type="button">この前に挿入</button>
+            <button class="conflict-btn" id="rf-insert-after" type="button">この後に挿入</button>
+            <button class="conflict-btn" id="rf-split-branch" type="button" title="あとで甲◯の2を追加する予定のとき、この証拠を甲◯の1にしておきます（甲◯の2の空き枠ができます）" hidden>甲◯の1にする</button>
+          </div>
+          <span class="insert-bar-hint" id="insert-bar-hint">空き枠より後ろに証拠があれば番号は自動で1つ繰り下がります。空き枠は証拠説明書に空行として出力され、ファイルを割り当てると消えます。</span>
+          <!-- 「このファイル自体をページで分ける」操作は、上の「別の証拠を割り込ませる」とは性質が違うので行を分ける -->
+          <div class="insert-bar-pages" id="insert-bar-pages" hidden>
+            <span class="insert-bar-label">1つのPDFに複数の枝番が入っているとき:</span>
+            <div class="insert-bar-actions">
+              <button class="conflict-btn" id="rf-split-pages" type="button" title="1つのPDFにまとめてスキャンした枝番を、ページの範囲で分けます（例: 1〜3ページ目を甲3の1、4〜5ページ目を甲3の2）" hidden>ページで枝番に分ける</button>
+              <button class="conflict-btn" id="rf-unsplit-pages" type="button" title="ページの範囲で分けた枝番を、元の1つのPDFに戻します" hidden>ページの分け方を元に戻す</button>
+            </div>
+            <!-- 1つのPDFにまとめてスキャンした枝番を、ページ範囲で分ける。分けた枝番は一覧では別々の
+                 行として扱い、出力時に元PDFから該当ページだけを切り出して1つの号証PDFに結合する。 -->
+            <div class="split-pages-form" id="split-pages-form" hidden>
+              <label class="split-pages-label" for="split-pages-input" id="split-pages-label">各枝番のページ（例: 1-3, 4-5）</label>
+              <input id="split-pages-input" class="text-input split-pages-input" spellcheck="false" autocomplete="off" />
+              <button class="conflict-btn" id="split-pages-ok" type="button">分ける</button>
+              <button class="ghost-button" id="split-pages-cancel" type="button">やめる</button>
+              <p class="field-error" id="split-pages-error" hidden></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel review-card">
+        <div class="review-card-head">
+          <div class="review-card-title">
+            <span class="pdf-badge">PDF</span>
+            <h2 id="rf-name"></h2>
+          </div>
+          <span class="pill" id="rf-badge"></span>
+          <button class="ghost-button source-preview-btn" id="rf-source-preview-btn" type="button">元ファイルを見る</button>
+        </div>
+
+        <div class="warn-banner inline" id="rf-warn-banner">
+          <span class="pill pill-warn-solid pill-nowrap">要確認</span>
+          <div class="warn-text" id="rf-confirm-text"></div>
+        </div>
+
+        <!-- 要確認への回答（チェック・二択）は、背の高いプレビューに押し下げられないよう
+             プレビューより前に置く。3列レイアウトではプレビューは右列へ移るので影響しない。 -->
+        <label class="confirm-check" id="rf-confirm-check-wrap" hidden>
+          <input type="checkbox" id="rf-confirm-check" />
+          <span id="rf-confirm-check-text">この内容を確認しました（確認済みにする）</span>
+        </label>
+        <div class="conflict-resolve" id="rf-conflict-resolve" hidden>
+          <span class="conflict-label">文書名の採用元:</span>
+          <button class="conflict-btn" id="rf-use-explanation" type="button"></button>
+          <button class="conflict-btn" id="rf-use-file" type="button"></button>
+        </div>
+        <div class="conflict-resolve" id="rf-author-resolve" hidden>
+          <span class="pill pill-warn-solid pill-nowrap resolve-required" id="rf-author-required">要選択</span>
+          <span class="conflict-label">作成者の表記（証拠説明書用）:</span>
+          <button class="conflict-btn" id="rf-author-primary" type="button"></button>
+          <button class="conflict-btn" id="rf-author-alt" type="button"></button>
+          <span class="resolve-hint" id="rf-author-hint">どちらかを選ぶと確認済みになります</span>
+        </div>
+        <div class="conflict-resolve" id="rf-stamp-resolve" hidden>
+          <span class="pill pill-warn-solid pill-nowrap resolve-required" id="rf-stamp-required">要選択</span>
+          <span class="conflict-label">号証番号の押印:</span>
+          <button class="conflict-btn" id="rf-stamp-new" type="button">新規に押す</button>
+          <button class="conflict-btn" id="rf-stamp-done" type="button">既に押印済み（押さない）</button>
+          <span class="resolve-hint" id="rf-stamp-hint">どちらかを選ぶと確認済みになります</span>
+        </div>
+
+        <!-- FB-15: 確認事項をPDFを別途開かずに判断できるよう、元ファイルをその場で表示
+             （PDFは同梱PDF.jsで直接描画＝内蔵ビュワーのサムネイル欄・ツールバーを出さない） -->
+        <div class="source-preview" id="rf-source-preview" hidden>
+          <!-- v5.2.1: 向きを直すボタンはプレビューのすぐ上に（プルダウンから変更） -->
+          <div class="rot-bar" id="rf-rot-bar" hidden>
+          <span class="rot-state" id="rf-rot-state"></span>
+          <button class="rot-btn" type="button" data-rot="-90" title="左に90°回す（反時計回り）">↺ 左に90°</button>
+          <button class="rot-btn" type="button" data-rot="90" title="右に90°回す（時計回り）">↻ 右に90°</button>
+          <button class="rot-btn" type="button" data-rot="180" title="上下を逆さまにする">180°</button>
+          <button class="rot-btn rot-reset" type="button" data-rot="reset" id="rf-rot-reset">元に戻す</button>
+          </div>
+          <div class="source-preview-pages" id="rf-source-pages" hidden></div>
+          <img id="rf-source-img" alt="元ファイルプレビュー" hidden />
+        </div>
+
+        <div class="review-columns">
+          <div class="review-col">
+            <div class="col-label">整理情報</div>
+            <div class="field-stack">
+              <label class="field">
+                <span class="field-label">種類</span>
+                <select id="rf-kind">
+                  <option>主張系</option><option>証拠説明書</option><option>証拠</option><option>関連事件の申立</option><option>その他</option>
+                </select>
+              </label>
+              <!-- UX-17: AIの値と異なるときだけ差分ヒント＋1クリック復元 -->
+              <div class="ai-orig-hint" id="rf-kind-orig" hidden>
+                <span class="ai-orig-value"></span>
+                <button class="ai-orig-restore" type="button" data-restore="kind">AIの値に戻す</button>
+              </div>
+              <!-- FB-16④: 証拠のときは「証拠説明書の標目」、それ以外は「文書名」に出し分け（app.js） -->
+              <label class="field">
+                <span class="field-label-row"><span id="rf-docname-label">文書名</span><span class="tag-warn" id="rf-docname-tag" hidden>要確認</span></span>
+                <input id="rf-docname" class="text-input" />
+              </label>
+              <div class="ai-orig-hint" id="rf-docname-orig" hidden>
+                <span class="ai-orig-value"></span>
+                <button class="ai-orig-restore" type="button" data-restore="docName">AIの値に戻す</button>
+              </div>
+              <label class="field">
+                <span class="field-label">提出用ファイル名（この名前で保存されます）</span>
+                <input id="rf-suggested" class="text-input" />
+              </label>
+              <!-- v5.2.2: ファイル名の番号と証拠番号の食い違い。ボタンを押したときだけ片方に合わせる -->
+              <div class="num-mismatch" id="rf-num-mismatch" hidden>
+                <span class="num-mismatch-text" id="rf-num-mismatch-text"></span>
+                <span class="num-mismatch-actions">
+                  <button class="num-fix-btn" type="button" id="rf-fix-number"></button>
+                  <button class="num-fix-btn" type="button" id="rf-fix-name"></button>
+                  <button class="num-fix-btn" type="button" id="rf-fix-reset"></button>
+                </span>
+              </div>
+              <div class="ai-orig-hint" id="rf-suggested-orig" hidden>
+                <span class="ai-orig-value"></span>
+                <button class="ai-orig-restore" type="button" data-restore="suggested">AIの値に戻す</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-col" id="rf-meta-col">
+            <div class="col-label-row">
+              <span class="col-label">PDF情報</span>
+              <span class="pill pill-danger" id="rf-delete-count">削除 0件</span>
+            </div>
+            <div id="rf-meta-rows"></div>
+          </div>
+        </div>
+
+        <div class="evidence-block" id="rf-evidence-block">
+          <div class="col-label-row">
+            <span class="col-label">証拠番号・押印</span>
+          </div>
+          <label class="field evnum-field">
+            <span class="field-label-row">証拠番号（証拠でなければ空欄）<span class="tag-warn" id="rf-evnum-tag" hidden>要確認</span></span>
+            <input id="rf-evnum-input" class="text-input" placeholder="例: 甲001（枝番は 甲3-1 のように）" spellcheck="false" />
+          </label>
+          <p class="evnum-hint" id="rf-evnum-hint" hidden>証拠番号を入力すると、証拠一覧に並び、並べ替え・押印ができます（例: 甲1、乙1、弁1）。番号が無いと「証拠以外」の扱いになります。</p>
+          <div class="ai-orig-hint" id="rf-evnum-orig" hidden>
+            <span class="ai-orig-value"></span>
+            <button class="ai-orig-restore" type="button" data-restore="evidenceNumber">AIの値に戻す</button>
+          </div>
+          <!-- FB-20②: 枝番の編集欄。後から枝番の途中に証拠を挿入する等の手直しに使う
+               （結合PDFのページ順は枝番の昇順に自動整列される＝FB-20①） -->
+          <label class="field evnum-field" id="rf-branch-field" hidden>
+            <span class="field-label">枝番（あれば。例: 1）</span>
+            <input id="rf-branch-input" class="text-input" placeholder="（枝番なし）" spellcheck="false" />
+          </label>
+          <!-- UX-16②: 「提出物から完全に除外」は重い操作なので danger-button で赤系に。
+               （「証拠番号だけ外す」は証拠番号欄を空にするのと同じで使われないため撤去した） -->
+          <div class="exclude-row" id="rf-exclude-row" hidden>
+            <button class="conflict-btn danger-button" id="rf-remove-file-btn" type="button" title="このファイルを読み込み一覧・提出物から完全に除外します（「編集をすべて取り消す」で戻せます）">このファイルを提出物から除外する</button>
+          </div>
+          <div class="merge-note" id="rf-merge-note" hidden></div>
+          <div class="stamp-list" id="rf-stamp-list"></div>
+          <!-- v5.2.0: 証拠説明書の欄をここで入力できる（任意・閉じた状態で置く）。AIの下書きがあれば最初から入る -->
+          <details class="expl-fields" id="rf-expl-fields" hidden>
+            <summary>証拠説明書の内容（任意）</summary>
+            <p class="expl-fields-note">証拠説明書（下書き）を作るときに使います。空欄のところは、生成された Word で記入できます。</p>
+            <label class="field">
+              <span class="field-label" id="rf-author-label">作成者</span>
+              <input id="rf-author-input" class="text-input" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span class="field-label" id="rf-created-label">作成年月日（例: R7.9.1）</span>
+              <input id="rf-created-input" class="text-input" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span class="field-label">原本・写し</span>
+              <select id="rf-orig-select">
+                <option value="">記載しない（電磁的記録として提出）</option>
+                <option value="原本">原本</option>
+                <option value="写し">写し</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">立証趣旨</span>
+              <textarea id="rf-purpose-input" class="text-input expl-purpose" rows="3"></textarea>
+            </label>
+          </details>
+        </div>
+      </section>
+
+      <div class="footer-row split">
+        <span class="review-progress" id="review-progress" hidden></span>
+        <div class="footer-actions">
+          <button class="ghost-button large-ghost" id="review-back-btn" type="button">戻る</button>
+          <button class="primary-button proceed-button" id="review-next-btn" type="button">出力前チェックへ</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: 出力 -->
+    <section class="screen" data-screen="export">
+      <section class="panel">
+        <!-- v5.2.0: 出力前の食い違いチェック（問題があるときだけ枠を出す。無ければ1行だけ）。
+             最初は画面の下にあり気づかれなかったので、画面のいちばん上に置く -->
+        <div class="output-check" id="output-check"></div>
+
+        <h2 class="panel-title-tight">出力先フォルダ</h2>
+        <p class="panel-sub">提出用ファイルを作成する保存先を選んでください。</p>
+
+        <div class="folder-dropzone" id="folder-dropzone">
+          <span class="folder-icon">📁</span>
+          <div class="folder-info">
+            <div class="folder-info-label">選択中の保存先</div>
+            <div class="folder-info-path" id="output-folder-path"></div>
+            <!-- UX-22: サブフォルダ作成時は選択したフォルダと実際の出力先が異なるため明示する -->
+            <div class="folder-final-path" id="output-final-path" hidden></div>
+          </div>
+          <button class="primary-button" id="choose-folder-btn" type="button">フォルダを選ぶ</button>
+        </div>
+
+        <div class="recent-folders">
+          <div class="recent-label">最近使ったフォルダ</div>
+          <div class="recent-list" id="recent-folder-list"></div>
+        </div>
+
+        <label class="subfolder-toggle">
+          <input type="checkbox" id="make-subfolder-checkbox" checked />
+          <span class="subfolder-text">
+            <span class="subfolder-title">専用サブフォルダを作成</span>
+            <span class="subfolder-sub">「提出用ファイル」フォルダにまとめて出力します</span>
+          </span>
+        </label>
+
+        <!-- FB-16⑤: リネームのみモードではプレビュー対象が無いため行ごと非表示（app.js） -->
+        <label class="subfolder-toggle" id="preview-toggle-row">
+          <input type="checkbox" id="preview-toggle-checkbox" checked />
+          <span class="subfolder-text">
+            <span class="subfolder-title">作成前にプレビューで確認する</span>
+            <span class="subfolder-sub">押印・結合の結果を実際のPDFで見てから書き出します</span>
+          </span>
+        </label>
+
+        <label class="subfolder-toggle" id="gen-expl-toggle" hidden>
+          <input type="checkbox" id="gen-expl-checkbox" />
+          <span class="subfolder-text">
+            <span class="subfolder-title">証拠説明書（下書き）も作成する</span>
+            <span class="subfolder-sub">証拠から証拠説明書を Word（編集用）で生成します。<strong>立証趣旨は下書きです。必ず弁護士がご確認・修正してください。</strong>未入力の箇所（●●）が無ければ、提出用PDFも同時に作成します。</span>
+          </span>
+        </label>
+        <p class="mode-note" id="expl-existing-note" hidden>証拠説明書は読み込んだ既存のものを使用します（照合のみ・生成しません）。</p>
+
+        <!-- UX-18: 未入力（●●）残数を出力前に表示。閲覧専用プレビューは廃止し、未入力が
+             残っていればPDF化は省略（Wordで埋めてから作り直す運用）。 -->
+        <p class="mode-note expl-blank-note" id="expl-blank-note" hidden></p>
+
+        <!-- UX-21: 「作成」を押すと何が行われるかの事前サマリ -->
+        <div class="export-summary" id="export-summary"></div>
+      </section>
+
+      <div class="footer-row align-right">
+        <button class="ghost-button large-ghost" id="export-back-btn" type="button">戻る</button>
+        <button class="primary-button proceed-button" id="export-next-btn" type="button">提出用ファイルを作成</button>
+      </div>
+    </section>
+
+    <!-- STEP 5: 完了 -->
+    <section class="screen" data-screen="done">
+      <section class="panel completion-panel">
+        <div class="completion-mark" id="done-mark">完了</div>
+        <h2 id="done-heading">提出用ファイルを作成しました</h2>
+        <p class="done-dest" id="done-dest" hidden></p>
+        <!-- v5.2.0: 合計の大きさと、アップロードの上限（mints は一度に200MBまで）の案内。
+             v5.2.1: 一覧の下だと目立たなかったので、一覧の上に枠で出す -->
+        <div class="done-size-note" id="done-size-note" hidden></div>
+        <div class="done-list" id="done-list"></div>
+        <div id="done-errors" role="alert"></div>
+        <p class="done-casefile" id="done-casefile" hidden></p>
+        <div class="footer-row center">
+          <button class="ghost-button" id="open-folder-btn" type="button">フォルダを開く</button>
+          <button class="primary-button small-primary" id="done-restart-btn" type="button">最初に戻る</button>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<div class="modal-overlay" id="preview-modal-overlay" hidden>
+  <div class="modal-box preview-box" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+    <div class="modal-head">
+      <h2 id="preview-modal-title">スタンプ配置プレビュー（証拠番号の位置を確認）</h2>
+      <button class="modal-close" id="preview-modal-close" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-sidebar">
+        <div class="preview-side-label">作成されるファイル</div>
+        <div class="preview-file-list" id="preview-file-list"></div>
+        <div class="preview-errors" id="preview-errors" hidden></div>
+      </div>
+      <div class="preview-stage">
+        <!-- FB-11: PDF.js描画＋スタンプオーバーレイ（焼き込みは承認時のみ）。 -->
+        <div class="pv-scroll" id="pv-scroll"></div>
+      </div>
+    </div>
+    <div class="preview-controls" id="preview-stamp-controls" hidden>
+      <div class="preview-ctl-group" id="preview-this-stamp" hidden>
+        <span class="conflict-label" id="preview-this-label">この号証の押印:</span>
+        <button class="conflict-btn" id="preview-stamp-new" type="button">新規に押す</button>
+        <button class="conflict-btn" id="preview-stamp-done" type="button">既に押印済み（押さない）</button>
+        <span class="rot-bar in-preview" id="preview-rot-bar">
+          <span class="rot-state" id="preview-rot-state"></span>
+          <button class="rot-btn" type="button" data-rot="-90" title="左に90°回す（反時計回り）">↺ 左に90°</button>
+          <button class="rot-btn" type="button" data-rot="90" title="右に90°回す（時計回り）">↻ 右に90°</button>
+          <button class="rot-btn" type="button" data-rot="180" title="上下を逆さまにする">180°</button>
+          <button class="rot-btn rot-reset" type="button" data-rot="reset" id="preview-rot-reset">元に戻す</button>
+        </span>
+      </div>
+      <div class="preview-ctl-group">
+        <span class="conflict-label">一括:</span>
+        <button class="conflict-btn" id="preview-bulk-new" type="button">すべて新規に押す</button>
+        <button class="conflict-btn" id="preview-bulk-done" type="button">すべて既に押印済み</button>
+      </div>
+    </div>
+    <div class="preview-foot">
+      <span class="preview-hint">
+        <span class="preview-caution">※ mints提出後、各ファイルの1ページ目の上端8〜19mm（右寄り）に裁判所のタイムスタンプ帯が付されます。1ページ目の証拠番号は上端約21mmより下（既定位置）に置き、重ならないかご確認ください。</span>
+        <span id="preview-hint"></span>
+      </span>
+      <div class="preview-foot-actions">
+        <button class="ghost-button" id="preview-cancel-btn" type="button">キャンセル</button>
+        <button class="primary-button small-primary" id="preview-commit-btn" type="button">承認して書き出す</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- FB-13: 事務所の書き方メモ（userData/firm-notes.txt。プロンプトコピー時に末尾へ連結） -->
+<div class="modal-overlay" id="firm-notes-overlay" hidden>
+  <div class="modal-box firm-notes-box" role="dialog" aria-modal="true" aria-labelledby="firm-notes-title">
+    <div class="modal-head">
+      <h2 id="firm-notes-title">事務所の書き方メモ</h2>
+      <button class="modal-close" id="firm-notes-close" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div class="modal-body firm-notes-body">
+      <p class="firm-notes-desc">立証趣旨の書き方など、事務所独自の工夫を自由に書いてください。
+        「AI用プロンプトをコピー」のたびにプロンプトの末尾へ自動で連結されます（空欄なら何も足しません）。
+        この内容はこのパソコンにだけ保存され、アプリを更新しても消えません。</p>
+      <!-- UX-13: 保存先の見える化（どこに保存されるか分からない不安への対応） -->
+      <p class="firm-notes-path"><span id="firm-notes-path"></span>
+        <button class="ai-orig-restore" id="firm-notes-open-dir" type="button">保存先フォルダを開く</button></p>
+      <textarea id="firm-notes-textarea" class="ai-textarea firm-notes-textarea" spellcheck="false"
+        placeholder="例）&#10;・立証趣旨は「〜の事実」で終える体言止めにする。&#10;・契約書の立証趣旨には契約日と当事者名を必ず入れる。"></textarea>
+      <div class="firm-notes-actions">
+        <span class="firm-notes-status" id="firm-notes-status"></span>
+        <button class="ghost-button" id="firm-notes-cancel" type="button">キャンセル</button>
+        <button class="primary-button" id="firm-notes-save" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="help-modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div class="modal-head">
+      <h2 id="help-modal-title">使い方</h2>
+      <button class="modal-close" id="help-modal-close" type="button" aria-label="閉じる">×</button>
+    </div>
+    <div class="modal-body">
+      <p>「LegalLeaves」は、裁判所への提出ファイルづくり（リネーム・メタデータ削除・証拠番号スタンプ・結合・証拠説明書の下書き）を次の5ステップで行うツールです。</p>
+
+      <!-- UX-13/14・FB-18①: データの保存場所と削除。アンインストール時等に真っ先に必要な情報
+           なので、5ステップ解説の後ろではなくヘルプ冒頭に置く -->
+      <h3>データの保存場所と削除（アプリをやめるとき）</h3>
+      <!-- FB-18①追加指摘: 保存される/されないを別段落に分けて視覚的に区別する -->
+      <p><strong>保存されるもの</strong>（このパソコンにだけ。クラウドには送信しません）:
+        事務所の書き方メモ／最近使ったフォルダの履歴／画面設定。</p>
+      <p><strong>保存されないもの</strong>: 読み込んだファイルやAIの整理データ（作業内容そのもの）は
+        保存されず、終了時に消えます。</p>
+      <p class="help-data-path" id="help-data-path"></p>
+      <div class="help-data-actions">
+        <button class="ghost-button" id="open-appdata-btn" type="button">保存先フォルダを開く</button>
+        <button class="ghost-button" id="delete-recent-btn" type="button">フォルダ履歴を削除</button>
+        <button class="ghost-button danger-button" id="delete-appdata-btn" type="button">アプリのデータを完全に削除</button>
+      </div>
+      <p class="modal-note">「完全に削除」はメモ・履歴・設定・内部キャッシュをすべて削除し、アプリを終了します（アンインストールやアプリをやめるときにご利用ください。読み込んだ元ファイルや出力済みの提出ファイルには影響しません）。アプリそのものは、Windows の「設定 → アプリ」からアンインストールできます（その際にもメモ等を消すか確認されます）。</p>
+
+      <h3>① 読み込み</h3>
+      <ul>
+        <li>提出するファイル（PDF・画像・Word/Excel/PowerPoint・音声・動画）をドラッグ＆ドロップ、または「ファイルを選択」で追加します。</li>
+        <li>「AI用プロンプトをコピー」でプロンプトをコピーし、AI（Gemini/ChatGPT等）に貼り付けてファイルを添付します。添付数に上限があるAIでは数回に分けて送り、最後に「完成」と入力します。</li>
+        <li>「事務所の書き方メモを編集」に立証趣旨などの事務所独自の工夫を書いておくと、プロンプトのコピー時に自動で末尾へ追加されます（アプリを更新しても消えません）。</li>
+        <li><strong>外部AIの利用について</strong>: 添付したファイルは外部のAIサービスに送信されます。事務所で認められたサービス・アカウントを使い、入力内容が学習に使われない設定（ビジネスプラン等）をご確認ください。コピーしたプロンプトはOSのクリップボードに残るため、クリップボード履歴・クラウド同期が有効な環境ではその設定にもご注意ください。</li>
+        <li>AIが出力した整理データ(JSON)を右の欄に貼り付けます(「クリップボードから貼り付け」も使えます)。</li>
+        <li>すでに押印・完成済みのファイルを名前だけ整えたいときは、上部の「リネーム＋メタデータ削除」にチェックします（スタンプ・変換・結合をしません）。</li>
+        <li><strong>後から少しだけ証拠を追加するとき</strong>は、ファイル名を「甲1の2_領収書.pdf」のように号証番号から始めておき、「AIを使わずに進む」を押します。番号はファイル名から、標目は番号より後ろの部分から入ります（作成者・立証趣旨は生成される証拠説明書のWordで記入します）。追加が多いときは、追加分のファイルだけをAIに渡してください。前回提出した分は読み込み直さなくて構いません。</li>
+      </ul>
+
+      <h3>② 照合</h3>
+      <ul>
+        <li>ファイルとAIの整理データを自動で照合します。確認が必要な項目はオレンジ色のバナーで知らせます。</li>
+        <li>読み込み忘れ・AIへの送り忘れ・証拠説明書との食い違い・AIからの注意などが無いときは、この画面を飛ばして確認画面へ直接進みます（上の「照合」を押せば中身を見られます）。</li>
+        <li>証拠説明書を一緒に読み込んだ場合は、記載の号証番号と実ファイルの整合（不足・範囲外）もチェックします。</li>
+        <li>照合できなかったファイルには、AIデータを手動で割り当てられます。</li>
+      </ul>
+
+      <h3>③ 確認</h3>
+      <ul>
+        <li>ファイルごとに「種類」「文書名」「提出用ファイル名」「証拠番号」を確認・修正できます。</li>
+        <li>「元ファイルを見る」で、元のPDF・画像をその場で表示して確認事項を判断できます（Word等は外部アプリで開きます）。画面が広いときは、選んだファイルのプレビューが自動で開きます。途中で窓を広げたときも開き、狭めたときは閉じます（「プレビューを閉じる」を押すと、そのあとは自動では開きません。ボタンで開け閉めしたあとは、窓の大きさを変えてもそのままです）。</li>
+        <li>左の一覧は、要確認のものがあると最初はそれだけを表示します（画面が広いときは最初から全件）。<strong>並べ替え・挿入は「全件を表示」にしてから</strong>行います。</li>
+        <li>提出用ファイル名の番号を書き換えても、証拠番号は変わりません。食い違うと欄の下に知らせが出るので、「証拠番号を○にする」か「ファイル名を○で始める」を押して合わせます（出力前チェックの行にも同じボタンがあります）。</li>
+        <li>証拠番号を書き換えると、提出用ファイル名の先頭の番号も合わせて変わります。途中の番号が空いたときは「後で追加予定」の空き枠になります（証拠説明書には空行で出ます）。</li>
+        <li>提出用ファイル名は、欄に書いてある名前のまま保存されます（同じ号証の枝番を1つのPDFにまとめるときは、番号と標目から名前を作ります）。</li>
+        <li>証拠説明書を作るときは、証拠ごとに「証拠説明書の欄」（作成者・作成日・原本／写し・立証趣旨）をその場で書き込めます。書いた内容は証拠説明書の下書きに入ります（空欄は ●● のままです）。</li>
+        <li>読み込んだファイルの番号に抜けがあるとき（甲1 と 甲4 だけ等）は、その位置に「甲2・甲3 は今回のファイルにありません」と薄く表示します。前に提出済みの番号ならそのままで構いません。あとで出す予定なら「後で追加予定にする」で空き枠にできます。</li>
+        <li>あとで枝番を足す予定なら、「甲1の1にする」（選んでいる証拠の番号が入ります）で甲1を甲1の1にし、甲1の2の空き枠を作れます。</li>
+        <li>写真やスキャンが横向き・逆さまのときは、「元ファイルを見る」のプレビューの上にある「↺ 左に90°」「↻ 右に90°」「180°」で向きを直せます（プレビューにもすぐ反映されます。「元に戻す」で元の向きへ）。出力前のプレビューでも同じボタンで直せます。</li>
+        <li>証拠番号スタンプの押印する／しない・位置を変更できます。すでに番号が押された証拠一式なら「すべて既に押印済み」で一括設定できます。</li>
+        <li>mints提出後に裁判所が1ページ目上部へ付けるタイムスタンプ帯と重なりそうな押印位置には警告が出ます（ワンクリックで帯の直下へ移動できます）。</li>
+        <li><strong>1つのPDFに複数の枝番が入っているとき</strong>は、「ページで枝番に分ける」で「1-3, 4-5」のようにページを指定すると、1〜3ページ目が の1、4〜5ページ目が の2 になります。AIが区切りを見つけていれば入力欄に最初から入っています。2つ目以降の枝番の標目は直してください。出力時は1つのPDFにまとまり、番号は各枝番の先頭ページにだけ押されます。「ページの分け方を元に戻す」で元に戻せます。</li>
+        <li>PDFに残っているタイトルや作成者などの情報は、項目ごとに「削除／維持」を選べます。</li>
+        <li><strong>削除されるメタデータの範囲</strong>（事務所名・個人名が入りうる項目です）:
+          <strong>タイトル・作成者・件名・キーワード・作成アプリ（Creator）・出力アプリ（Producer）</strong>と、
+          <strong>XMP</strong>（WordがPDF出力時に埋め込む詳細情報。ビュワーのタブに残るのはこれです）。
+          <br>次のものは<strong>削除の対象外</strong>です: 作成日時・更新日時、PDFに独自に埋め込まれた項目、
+          PDF内のJavaScript・自動実行の設定、埋め込みファイル・添付、外部リンク、入力フォーム。
+          <strong>本文（見えている文字・画像）に書かれた氏名や事務所名は消えません</strong>ので、
+          本文の内容は目視でご確認ください。</li>
+      </ul>
+
+      <h3>④ 出力</h3>
+      <ul>
+        <li>証拠説明書を作る設定で立証趣旨が1つでも入っていれば、プレビューの一覧のいちばん下の「証拠説明書（下書き）」で、書く内容を表で確かめられます（実際の書式は作成される Word で確かめてください）。</li>
+        <li>画面の上に「出力前チェック」が出ます。提出用ファイル名の番号と押す番号の食い違い、枝番の重なり・飛び、同じ名前のファイルなどがあれば一覧で知らせます（押すと確認画面のその証拠へ戻ります。そのまま作成することもできます）。</li>
+        <li>保存先フォルダを選びます(ドラッグ＆ドロップでも指定できます)。同じ号証番号で枝番が分かれたファイルは、1つのPDFに自動で結合されます。</li>
+        <li>「証拠説明書（下書き）も作成する」をオンにすると、証拠の内容から証拠説明書をWordとPDFで自動生成します（立証趣旨は下書きです）。書式は改正民事訴訟法（令和8年5月21日施行）の裁判所公式ひな形に準拠します（号証は半角「甲001」「甲002-1」、原本・写しは標目内に表記、記載がないものは電磁的記録として提出の扱い）。</li>
+        <li>証拠説明書のWordを編集して<strong>Word以外の方法（印刷→PDF等）でPDF化した場合</strong>は、作成者などのメタデータが入ることがあります。そのPDFを「リネーム＋メタデータ削除」モードに通すと、メタデータを消せます（Wordの「名前を付けて保存」でのPDF化は、テンプレートの個人情報削除設定により作成者は入りません）。</li>
+        <li><strong>Word文書（.docx）を読み込むと</strong>、確認画面の「PDF情報」欄に「保存時に個人情報を削除」が未設定かどうかを表示します。未設定の文書を<strong>Wordで直接PDF化して提出すると作成者欄にPCのユーザー名が入るおそれ</strong>があります。LegalLeavesで出力すればメタデータは自動で削除されるので、なるべくLegalLeaves経由で提出してください。</li>
+        <li>プレビューでは、証拠番号スタンプを<strong>ドラッグでそのまま動かして</strong>位置を微調整できます（向き（↺ ↻ 180° のボタン）・押印の有無もその場で変更可）。1ページ目には裁判所タイムスタンプが付く位置が半透明で表示されるので、重ならない位置に置いてください。問題なければ「承認して書き出す」で確定します（このときに初めてPDFへ焼き込まれます）。</li>
+      </ul>
+
+      <h3>⑤ 完了</h3>
+      <ul>
+        <li>作成されたファイルの一覧を、それぞれの大きさと一緒に確認できます。「フォルダを開く」で保存先をすぐに開けます。</li>
+        <li>合計の大きさと、mints の一度のアップロードの上限（200MB）を超えるかどうかを表示します。超えるときは何回かに分けてアップロードしてください。1つで上限を超えるファイルは、分けるか小さくする必要があります。</li>
+      </ul>
+
+      <p class="modal-note">上部のステップ表示は、実際に進んだステップまでは戻ってクリックできますが、まだ到達していない先のステップへは進めません。</p>
+      <p class="modal-note">本ソフトは MIT ライセンスで提供されます（無償・無保証。詳細は同梱の LICENSE.txt）。出力の最終確認は必ず弁護士が行ってください。</p>
+      <p class="modal-note">本ソフトはオープンソースソフトウェア（pdf-lib、docxtemplater ほか・MIT等）と SIL OFL 1.1 のフォントを利用しています。著作権表示・ライセンス全文は同梱の THIRD-PARTY-NOTICES.md／assets/fonts/OFL.txt／LICENSES.chromium.html を参照してください。</p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./vendor/pdfjs/loader.mjs"></script>
+<!-- 監査⑥: app.js の分割。定義を先に読み、イベント配線・初期化を持つ app.js を最後に読む。 -->
+<!-- 帯・スタンプ位置の定数（唯一の定義場所）。他より先に読む -->
+<script src="./timestamp-zone.js"></script>
+<script src="./app-state.js"></script>
+<script src="./app-evidence.js"></script>
+<script src="./app-screens.js"></script>
+<script src="./app-review.js"></script>
+<script src="./app-preview.js"></script>
+<script src="./app-explanation.js"></script>
+<script src="./app-output.js"></script>
+<script src="./app-wiring.js"></script>
+</body>
+</html>

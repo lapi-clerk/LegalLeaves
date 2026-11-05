@@ -1,0 +1,44 @@
+LegalLeaves ライセンス（MIT License）
+=====================================
+
+本ソフトウェア「LegalLeaves」は MIT ライセンスで提供されます。原文（英語）が正文です。
+
+【日本語での要旨（参考訳・非正文）】
+- 無償で、誰でも、利用・複製・改変・再配布（商用含む）ができます。
+- 再配布の際は、下記の著作権表示とこの許諾表示を含めてください。
+- 本ソフトは「現状有姿」で提供され、いかなる保証もありません。
+  利用により生じた損害について、作者は責任を負いません。
+
+【重要なお願い（法的拘束力のない注意書き）】
+本ソフトの出力（ファイル名、証拠番号スタンプ、結合結果、メタデータ処理、
+証拠説明書の下書きを含む）は作業の補助です。裁判所への提出前に、必ず
+弁護士等の資格者が内容を確認してください。
+
+【第三者ソフトウェア】
+本ソフトはオープンソースソフトウェアおよび SIL Open Font License 1.1 のフォントを
+利用しています。著作権表示とライセンス全文は、同梱の THIRD-PARTY-NOTICES.md、
+assets/fonts/OFL.txt、LICENSES.chromium.html を参照してください。
+
+-------------------------------------------------------------------
+
+MIT License
+
+Copyright (c) 2026 LegalLeaves
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
