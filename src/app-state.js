@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // 画面の共有状態と基盤（$ ヘルパ・state・定数・ファイル受け取り・AI出力の検証）
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
 // クラシックスクリプトなのでグローバルスコープを共有する。**このファイルを最初に読む**
 // （state などの束縛を他ファイルより先に用意するため）。
 // ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ const state = {
   maxReachedIndex: 0,
   aiText: "",
   aiJsonError: "",
-  aiCardCollapsed: false, // UX-3: 正常受領時に生JSONを畳んで受領カードを見せる
+  aiCardCollapsed: false, // 正常受領時に生JSONを畳んで受領カードを見せる
   makeSubfolder: true,
   outputFolder: "",
   recentFolders: [],
@@ -41,10 +41,10 @@ const state = {
   orphanEntries: [], // submittable AI entries with no matching file (assign candidates)
   aiEntries: [], // all parsed AI file entries (for the manual-assign dropdown)
   consistency: null, // v3 pattern-A: 証拠説明書 vs actual evidence files check result
-  excludedFiles: [], // UX-16①: 確認画面の「ファイルごと除外」で外したファイル（「編集をすべて取り消す」で復元）
+  excludedFiles: [], // 確認画面の「ファイルごと除外」で外したファイル（「編集をすべて取り消す」で復元）
   matchSkipped: false, // 照合で対応すべきことが無く、照合画面を飛ばして確認へ来たか
   splitPagesFor: null, // 「ページで枝番に分ける」入力欄を開いたときの対象（別ファイルへ切り替えたら閉じる）
-  placeholders: [], // FB-21②Phase2: 「後で追加予定」の空き号証番号（例 "甲002"）。セッション内のみ・ファイルにその番号が付くと自動で消える
+  placeholders: [], // 「後で追加予定」の空き号証番号（例 "甲002"）。セッション内のみ・ファイルにその番号が付くと自動で消える
   renameOnly: false, // rename-only mode: copy files to submission names, no processing
   autoSourcePreview: true, // 広い画面で元ファイルのプレビューを自動で開くか（利用者が閉じたら false）
   sourcePreviewTouched: false, // 利用者がプレビューのボタンを一度でも押したか（押していなければ窓を狭めると自動で閉じる）
@@ -70,11 +70,11 @@ function noAiData() {
   return !state.aiText.trim() && (state.renameOnly || state.noAi);
 }
 
-// FB-15: 確認画面の「元ファイルを見る」インラインプレビュー
+// 確認画面の「元ファイルを見る」インラインプレビュー
 let sourcePreviewUrl = null;
 let sourcePreviewPath = null;
 
-// FB-21②Phase3: 一覧のドラッグ並べ替え中の対象。{level:"num", num} または {level:"branch", num, branch}
+// 一覧のドラッグ並べ替え中の対象。{level:"num", num} または {level:"branch", num, branch}
 let evDrag = null;
 
 
@@ -106,9 +106,9 @@ function isAvName(name) {
   return /\.(mp3|mp4)$/i.test(String(name || ""));
 }
 // Submission extension. Rename-only mostly keeps the original extension, EXCEPT
-// Office/RTF: FB-16 made rename-only convert those to PDF (metadata removal), so
+// Office/RTF: rename-only converts those to PDF (metadata removal), so
 // the submission name must say .pdf too — otherwise renameOnlyDest() appends the
-// real extension and produces 「訴状.docx.pdf」 (FB-16⑥の二重拡張子バグ).
+// real extension and produces 「訴状.docx.pdf」 (a double extension).
 function submitExtFor(name) {
   if (state.renameOnly) {
     const ext = String(name || "").match(/\.[^.]+$/)?.[0]?.toLowerCase() || "";
@@ -170,7 +170,7 @@ async function collectFilesFromDataTransfer(dataTransfer) {
 
 // main から返るファイル情報を state.files の1件へ反映する。
 // 取り込み経路が2つある（addFiles＝読み込み時／ensureMetadataLoaded＝未取得の再試行）ため、
-// ここに集約する。**別々に書くと片方だけ項目が抜ける**（実際にUX-42のA3超警告が
+// ここに集約する。**別々に書くと片方だけ項目が抜ける**（実際にA3超の警告が
 // addFiles側で overA3 を渡しておらず、警告が一度も出ていなかった）。
 function mergeMetaResult(f, r) {
   if (!r) return f;
@@ -178,9 +178,9 @@ function mergeMetaResult(f, r) {
     ...f,
     metaFields: r.fields || [],
     metaError: r.error || null,
-    officeMeta: r.officeMeta || null,   // FB-19: Wordの個人情報削除フラグ
-    activeContent: r.activeContent || null, // SEC-C13: 能動的コンテンツ（検出のみ）
-    overA3: r.overA3 || null,           // UX-42: A3を超えるページの寸法
+    officeMeta: r.officeMeta || null,   // Wordの個人情報削除フラグ
+    activeContent: r.activeContent || null, // 能動的コンテンツ（検出のみ）
+    overA3: r.overA3 || null,           // A3を超えるページの寸法
     pageCount: r.pageCount || null,     // PDFのページ数（ページ範囲で枝番に分けるときに使う）
   };
 }
@@ -226,7 +226,7 @@ function validateAiJson() {
     state.aiJsonError = "";
     return;
   }
-  // SEC-C7: 桁違いに大きな貼り付け（誤操作・細工）でJSON.parseが固まるのを防ぐ
+  // 桁違いに大きな貼り付け（誤操作・細工）でJSON.parseが固まるのを防ぐ
   if (text.length > 10 * 1024 * 1024) {
     state.aiJsonError = "貼り付けられたデータが大きすぎます（10MBまで）。AIの整理データ(JSON)だけを貼り付けてください。";
     return;
@@ -250,7 +250,7 @@ function validateAiJson() {
   state.aiJsonError = "";
 }
 
-// SEC-C7追補（監査①）: 外部AIの出力は「信頼できない入力」として扱う。JSONとして読めても、
+// 外部AIの出力は「信頼できない入力」として扱う。JSONとして読めても、
 // 件数・文字列長・数値が極端だと、照合ループやDOM生成・PDFへの命令生成でUIが固まったり
 // メモリを食い潰したりする（全体10MBのサイズ上限だけでは、CPU負荷や配列件数の防御にならない）。
 // 上限は実務の最大想定（1バッチ数百件・1ファイル数百ページ）より十分大きく取り、
@@ -310,7 +310,7 @@ function checkAiLimits(parsed) {
   return null;
 }
 
-// UX-17: AIの元の値と現在値が異なるフィールドにだけヒントを表示する
+// AIの元の値と現在値が異なるフィールドにだけヒントを表示する
 function renderAiOriginalHint(id, rf, key, current) {
   const el = $(id);
   const orig = rf && rf.aiOriginal ? rf.aiOriginal[key] : undefined;
@@ -321,7 +321,7 @@ function renderAiOriginalHint(id, rf, key, current) {
   }
 }
 
-// UX-3: 受領カードのサマリ（バリデーション通過済みの aiText を前提とする）
+// 受領カードのサマリ（バリデーション通過済みの aiText を前提とする）
 function aiReceiptSummary() {
   try {
     const parsed = JSON.parse(state.aiText.trim());

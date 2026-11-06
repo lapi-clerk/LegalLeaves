@@ -20,7 +20,7 @@ from .paths import resource_path
 
 SUBFOLDER_NAME = "提出用ファイル"
 MAX_BATCH_FILES = 500
-MAX_SOURCE_FILE_BYTES = 500 * 1024 * 1024  # SEC-C7: 1ファイル500MB
+MAX_SOURCE_FILE_BYTES = 500 * 1024 * 1024  # 1ファイル500MB
 
 OFFICE_EXTS = {".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".rtf"}
 AV_EXTS = {".mp3", ".mp4"}
@@ -250,7 +250,7 @@ def convert_office_to_pdf(src_path):
 
 
 def inspect_docx_personal_info(path):
-    """FB-19: Word 文書の「保存時に個人情報を削除」の有無と、残っている作成者などを返す。"""
+    """Word 文書の「保存時に個人情報を削除」の有無と、残っている作成者などを返す。"""
     try:
         if os.path.getsize(path) > 40 * 1024 * 1024:
             return None
@@ -466,7 +466,7 @@ class Session:
         docx_engine.generate_evidence_explanation(template, docx_path, data)
         written = [{"name": os.path.basename(docx_path), "path": docx_path, "evidenceNumber": None}]
         errors = []
-        # UX-18: 未入力（●●）が残っているうちは PDF 化しない（Word で埋めた後に作り直すため）
+        # 未入力（●●）が残っているうちは PDF 化しない（Word で埋めた後に作り直すため）
         if "●●" in json.dumps(data, ensure_ascii=False):
             return {"written": written, "errors": errors}
         stem = os.path.splitext(os.path.basename(docx_path))[0]
@@ -608,7 +608,7 @@ def _expand_paths(paths):
 
 
 def cleanup_stale_temp_dirs():
-    """SEC-C4: クラッシュ等で残った一時フォルダを起動時に消す（使用中の可能性を考え1時間以上前のものだけ）。"""
+    """クラッシュ等で残った一時フォルダを起動時に消す（使用中の可能性を考え1時間以上前のものだけ）。"""
     root = _temp_root()
     cutoff = time.time() - 3600
     try:
@@ -628,7 +628,7 @@ def cleanup_stale_temp_dirs():
 
 def prompt_text(rename_only):
     """AI 用プロンプト（同梱）＋事務所の書き方メモ。"""
-    name = "ai-prompt-rename-only.txt" if rename_only else "ai-prompt.txt"
+    name = "ai-prompt-rename-only.md" if rename_only else "ai-prompt.md"
     with open(resource_path("assets", name), encoding="utf-8") as f:
         text = f.read()
     notes = storage.read_firm_notes().strip()

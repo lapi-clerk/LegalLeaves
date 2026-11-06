@@ -1,4 +1,4 @@
-// FB-11: pdfjs-dist の必要2ファイルを src/vendor/pdfjs/ へコピーする（コミット対象）。
+// pdfjs-dist の必要2ファイルを src/vendor/pdfjs/ へコピーする（コミット対象）。
 // レンダラーは file:// で読み込むため node_modules 直参照ではなくアプリ内に同梱する。
 // 実行: node build/copy-pdfjs.js（pdfjs-dist を更新したら再実行してコミット）
 //

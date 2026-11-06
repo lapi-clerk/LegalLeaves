@@ -2,13 +2,13 @@
 // 「確認」画面（証拠一覧・ドラッグ並べ替え・スタンプ行・元ファイルプレビュー）と
 // 「出力」「完了」画面の描画
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
 // ---------------------------------------------------------------------------
 
 // Renders the parts that depend on the evidence number (merge note + stamp
 // labels). Called on render AND live as the number is edited.
 function renderEvidenceDerived(rf) {
-  // UX-17-1: 証拠番号欄はキャレット保持のため renderReview() を通らない軽量更新パス
+  // 証拠番号欄はキャレット保持のため renderReview() を通らない軽量更新パス
   // なので、「AIの値に戻す」ヒントもここで更新する（入力中に即時表示されるように）。
   renderAiOriginalHint("rf-evnum-orig", rf, "evidenceNumber", rf.evidenceNumber);
   renderNumMismatch(rf);
@@ -43,7 +43,7 @@ function renderEvidenceDerived(rf) {
   const stamps = Array.isArray(rf.stamps) ? rf.stamps : [];
   if (!stamps.length) {
     if (rf.evidenceNumber) {
-      // UX-27①: 「押印を追加」ボタンという別パラダイムを廃止。番号があるのにスタンプが無い
+      // 「押印を追加」ボタンという別パラダイムを廃止。番号があるのにスタンプが無い
       // ときは、既定で「押印なし（draw_label:false）」のスタンプを実際に持たせ、
       // 既存の押印なし行と同じトグル行で表示する（トグルでオン/オフ）。出力結果は不変。
       const stamp = { page: 1, branch: null, draw_label: false, rotate_degrees: 0, position: { x: 0.93, y: STAMP_SAFE_Y, anchor: "top-right" } };
@@ -60,10 +60,10 @@ function renderEvidenceDerived(rf) {
   stamps.forEach((s) => list.appendChild(makeStampRow(rf, s)));
 }
 
-// FB-6: mints提出後、各PDFの1ページ目上部に裁判所のタイムスタンプ帯が付される。
+// mints提出後、各PDFの1ページ目上部に裁判所のタイムスタンプ帯が付される。
 // 帯の位置と証拠番号の既定位置は src/timestamp-zone.js に集約した（唯一の定義場所）。
 // ここでは TIMESTAMP_ZONE / STAMP_SAFE_Y / TS_*_PT / IMG_NUMBER_TOP_PT をそのまま使う。
-// ※A4横・A3の帯の位置は未確認。詳細は timestamp-zone.js の冒頭と FB-6b を参照。
+// ※A4横・A3の帯の位置は未確認。詳細は timestamp-zone.js の冒頭を参照。
 
 // 画像（写真・スクショ）判定と、そこに焼き込む回転角（最初の非0）。画像は白帯＋番号が
 // 回転で崩れるため、回転はプレビューのベースPDFへ焼き込む（PDFは従来どおりライブ回転）。
@@ -78,7 +78,7 @@ function imageBakeRotation(stamps) {
   return 0;
 }
 
-// UX-28: 位置の5択セレクト（CORNER_OPTIONS/CORNER_POS）は撤去した。位置調整はタイムスタンプ帯の
+// 位置の5択セレクト（CORNER_OPTIONS/CORNER_POS）は撤去した。位置調整はタイムスタンプ帯の
 // 「帯の直下へ移動」ボタン＋プレビューのドラッグに一本化（実務ではほぼ右上固定のため）。
 
 // この押印が「出力PDFの1ページ目」に載るか（＝タイムスタンプ帯と同じページか）。
@@ -87,7 +87,7 @@ function stampOnOutputFirstPage(rf, s) {
   if ((s.page ?? 1) !== 1) return false;
   const num = rf.evidenceNumber;
   if (num && !state.renameOnly && !isAvName(rf.name) && !state.mergeDisabled.has(num)) {
-    // FB-20①: 結合順（枝番昇順）と同じ判定を使う（buildOutputPlanと一致させる）
+    // 結合順（枝番昇順）と同じ判定を使う（buildOutputPlanと一致させる）
     return mergeGroupFor(num)[0] === rf;
   }
   return true;
@@ -281,7 +281,7 @@ function makeStampRow(rf, s) {
     label.textContent = text || "(番号未確定)";
     if (!text) label.classList.add("is-flagged");
   } else {
-    // UX-27: 押印なしのときの行ラベル。回転が付いていればそれも添える。
+    // 押印なしのときの行ラベル。回転が付いていればそれも添える。
     const curRotForLabel = ((Math.round((s.rotate_degrees || 0) / 90) * 90) % 360 + 360) % 360;
     label.textContent = curRotForLabel ? "押印なし（回転あり）" : "押印なし";
     label.classList.add("stamp-off");
@@ -292,17 +292,17 @@ function makeStampRow(rf, s) {
 
   const toggle = document.createElement("button");
   toggle.type = "button";
-  // UX-33: 「押印する（有効）＝緑／なし＝赤系」。メタデータの「維持=緑」クラスを流用した際に
+  // 「押印する（有効）＝緑／なし＝赤系」。メタデータの「維持=緑」クラスを流用した際に
   // 対応が逆（押す=赤）になっていた配色を是正。
   toggle.className = "meta-toggle stamp-toggle" + (drawing ? " is-keep" : "");
   toggle.title = "押印する／しない";
   const knob = document.createElement("span");
   knob.className = "meta-knob";
-  knob.textContent = drawing ? "押印" : "押印なし"; // UX-27②: 「なし」→「押印なし」
+  knob.textContent = drawing ? "押印" : "押印なし"; // 「なし」→「押印なし」
   toggle.appendChild(knob);
   toggle.addEventListener("click", () => { s.draw_label = !drawing; renderEvidenceDerived(rf); });
 
-  // UX-28: 位置セレクトは撤去（帯の直下ボタン＋プレビューのドラッグに一本化）。
+  // 位置セレクトは撤去（帯の直下ボタン＋プレビューのドラッグに一本化）。
   // v5.2.1: 回転のプルダウンも撤去し、プレビューの上のボタン（↺ ↻ 180°）に一本化。ここでは状態だけ示す。
   controls.append(toggle);
   const curRot = normalizeAngle(s.rotate_degrees ?? s.rotate ?? 0);
@@ -314,7 +314,7 @@ function makeStampRow(rf, s) {
   }
   row.append(page, label, controls);
 
-  // FB-6: 出力1ページ目の上端アンカー押印がタイムスタンプ帯に入っていたら警告＋ワンクリック退避
+  // 出力1ページ目の上端アンカー押印がタイムスタンプ帯に入っていたら警告＋ワンクリック退避
   // （勝手には動かさない。人が確定する）。
   if (stampHitsTimestampZone(rf, s)) {
     const warn = document.createElement("div");
@@ -336,13 +336,13 @@ function makeStampRow(rf, s) {
   return row;
 }
 
-// UX-27①: makeAddStampRow（「＋押印を追加」ボタン）は廃止。番号があるのにスタンプが無い場合も
+// makeAddStampRow（「＋押印を追加」ボタン）は廃止。番号があるのにスタンプが無い場合も
 // renderEvidenceDerived内で既定の「押印なし」トグル行として統一表示するようにした。
 
 // A flagged file is resolved when: (choice files) every binary choice has been picked;
 // (other files) the 確認しました box is ticked.
 function fileResolved(rf) {
-  // UX-30: AIが author_alt を出しつつ needs_user_confirmation=false にすることがあるため、
+  // AIが author_alt を出しつつ needs_user_confirmation=false にすることがあるため、
   // 二択（押印・作成者）の有無を needsConfirmation より先に判定する。未解決の二択が
   // 残っているファイルを「確認済み」と表示してしまうバグの修正。
   // rename-only hides the choice widgets, so the checkbox is the only resolver there
@@ -355,7 +355,7 @@ function fileResolved(rf) {
   if (!rf.needsConfirmation) return true;
   return !!rf.userConfirmed;
 }
-// UX-30: 「このファイルに答えるべき問いがあるか」。needsConfirmation（AIの確認フラグ）に加え、
+// 「このファイルに答えるべき問いがあるか」。needsConfirmation（AIの確認フラグ）に加え、
 // 二択（押印・作成者）が存在するファイルも対象（AIがフラグを立て忘れても取りこぼさない）。
 function fileNeedsResolution(rf) {
   return !!rf.needsConfirmation || (!state.renameOnly && (!!rf.stampAsk || !!rf.authorAlt));
@@ -364,7 +364,7 @@ function needsAttention(rf) {
   return fileNeedsResolution(rf) && !fileResolved(rf);
 }
 
-// ---------- FB-15: 確認画面の元ファイルプレビュー ----------
+// ---------- 確認画面の元ファイルプレビュー ----------
 // 確認事項の判断のためにPDFを別アプリで開き直さなくて済むよう、選択中ファイルの
 // 「元ファイルそのもの」をカード内に表示する（再生成なし）。PDFは同梱PDF.jsで直接
 // 描画する＝Chromium内蔵ビュワーのサムネイル欄・ツールバーが幅を取る問題がない。
@@ -542,7 +542,7 @@ async function openSourcePreview(rf) {
     for (let n = EAGER + 1; n <= doc.numPages; n++) srcPv.observer.observe(slots[n - 1]);
   }
 }
-// ---------- FB-21② Phase1: 号証番号順のファイル一覧 ----------
+// ---------- 号証番号順のファイル一覧 ----------
 // 確認画面のファイル切替を、横並びチップから号証番号順の縦リストに置き換えたもの。
 // 同じ号証番号のファイル（枝番）は1グループにまとめ、枝番の昇順で入れ子表示する
 // （並び順は結合PDFのページ順＝mergeGroupFor と同じ基準）。証拠番号を持たないファイルは
@@ -605,7 +605,7 @@ function advanceToNextAttention() {
   }
 }
 
-// FB-21②Phase2: プレースホルダ関連。1件は {num:"甲003", branch:null|"2"}。
+// プレースホルダ関連。1件は {num:"甲003", branch:null|"2"}。
 // branch=null は号証レベルの空き枠、branch="2" は甲003の中の枝番レベルの空き枠。
 function usedEvidenceNumbers() {
   const s = new Set();
@@ -747,7 +747,7 @@ function makeEvidenceRow({ rf, index }, sel, { branchLabel = "", showTitle = tru
   return row;
 }
 
-// FB-21②Phase2: 「後で追加予定」の空き枠の行（号証レベル／枝番レベル共通）。
+// 「後で追加予定」の空き枠の行（号証レベル／枝番レベル共通）。
 // branch が null なら号証全体の空き枠、"2" なら枝番の空き枠（グループ内に入れ子表示）。
 function makePlaceholderRow(num, branch) {
   const isBranch = branch != null;
@@ -825,7 +825,7 @@ function makeEvidenceGroupBox(g, sel, visible, branchPlaceholders) {
   return box;
 }
 
-// ---------- FB-21②Phase3: ドラッグで並べ替え（位置＝番号を振り直す） ----------
+// ---------- ドラッグで並べ替え（位置＝番号を振り直す） ----------
 function clearDropIndicators() {
   document.querySelectorAll("#review-list .ev-drop-before, #review-list .ev-drop-after, #review-list .ev-drop-onto")
     .forEach((el) => el.classList.remove("ev-drop-before", "ev-drop-after", "ev-drop-onto"));
@@ -1117,7 +1117,7 @@ function renderEvidenceList(sel) {
   // 「要確認のみ表示」の絞り込み（従来のチップと同じくファイル単位で効かせる）
   const visible = (item) => state.showAllReview || needsAttention(item.rf);
 
-  // FB-21②Phase2: グループ（ファイル）と号証レベルの空き枠を号証番号順にマージ。
+  // グループ（ファイル）と号証レベルの空き枠を号証番号順にマージ。
   // 枝番レベルの空き枠はグループへ渡して入れ子表示。空き枠は保留中の操作なので、
   // 「要確認のみ表示」でも常に見せる（間違えて挿入したとき×で消せるように）。
   const numPlaceholders = state.placeholders.filter((ph) => ph.branch == null);
@@ -1221,7 +1221,7 @@ function renderReview() {
   const sel = state.selectedReview;
   const rf = rfs[sel];
 
-  // FB-15: 別のファイルへ切り替わったら開いていた元ファイルプレビューを閉じる
+  // 別のファイルへ切り替わったら開いていた元ファイルプレビューを閉じる
   if (sourcePreviewPath && (!rf || sourcePreviewPath !== rf.path)) clearSourcePreview();
 
   $("toggle-all-icon").textContent = state.showAllReview ? "−" : "+";
@@ -1250,7 +1250,7 @@ function renderReview() {
     bulkBar.classList.toggle("is-resolved", pending === 0);
     $("bulk-stamp-new").classList.toggle("is-active", allNew);
     $("bulk-stamp-done").classList.toggle("is-active", allDone);
-    // UX-7: 未回答が1件だけなら一括ボタンは冗長（個別選択と重複）なので隠して誘導だけにする
+    // 未回答が1件だけなら一括ボタンは冗長（個別選択と重複）なので隠して誘導だけにする
     const singleAsk = pending === 1 && stampAskFiles.length === 1;
     $("bulk-stamp-new").hidden = singleAsk;
     $("bulk-stamp-done").hidden = singleAsk;
@@ -1263,7 +1263,7 @@ function renderReview() {
     bulkBar.hidden = true;
   }
 
-  // UX-31: 作成者表記（役割名/実名）の一括適用バー。選択肢を持つファイルが2件以上のときだけ。
+  // 作成者表記（役割名/実名）の一括適用バー。選択肢を持つファイルが2件以上のときだけ。
   const authorTargets = bulkAuthorTargets();
   const authorBar = $("bulk-author-bar");
   if (authorTargets.length >= 2) {
@@ -1281,7 +1281,7 @@ function renderReview() {
     authorBar.hidden = true;
   }
 
-  // UX-37: 「確認しました」チェックで解決する確認が2件以上あるとき、まとめて確認済みにできる。
+  // 「確認しました」チェックで解決する確認が2件以上あるとき、まとめて確認済みにできる。
   // （原本・写しの別のように、同じ確認がすべての証拠に付くことがある＝1件ずつ潰すのは手間）。
   const pendingConfirm = bulkConfirmTargets().filter((r) => !r.userConfirmed);
   const confirmBar = $("bulk-confirm-bar");
@@ -1296,7 +1296,7 @@ function renderReview() {
   } else {
     confirmBar.hidden = true;
   }
-  // FB-21②Phase2: 「証拠の挿入」は号証番号を持つファイルを選んでいるときだけ出す。
+  // 「証拠の挿入」は号証番号を持つファイルを選んでいるときだけ出す。
   // 枝番付きを選んでいるときは枝番レベルの挿入、単独なら号証レベルの挿入＋「枝番に分ける」。
   const showInsert = !state.renameOnly && !!rf.evidenceNumber;
   $("insert-bar").hidden = !showInsert;
@@ -1336,7 +1336,7 @@ function renderReview() {
   const confirmText = attention ? rf.confirmText || "内容をご確認ください。" : "";
   const confirmTextEl = $("rf-confirm-text");
   confirmTextEl.textContent = confirmText;
-  // UX-17-4: 作成者・撮影情報・立証趣旨などは証拠説明書の下書き用フィールドで、この画面に
+  // 作成者・撮影情報・立証趣旨などは証拠説明書の下書き用フィールドで、この画面に
   // 入力欄が無い。AIの確認文が「設定する必要があります」等と書くと「ここで設定できるはず」と
   // 誤解されるため、Word側で記入する運用であることを固定文で補足する（アプリ内で選択できる
   // 作成者の二択（authorAlt）が出ているときは、その場で解決できるので出さない）。
@@ -1415,7 +1415,7 @@ function renderReview() {
   const flagNum = attention && !!rf.evidenceNumber;
   const flagDoc = attention && !flagNum;
   $("rf-kind").value = KIND_OPTIONS.includes(rf.kind) ? rf.kind : "その他";
-  // FB-16④: 証拠は「証拠説明書の標目」＝この欄の実際の用途を短く示す。証拠以外は「文書名」
+  // 証拠は「証拠説明書の標目」＝この欄の実際の用途を短く示す。証拠以外は「文書名」
   $("rf-docname-label").textContent = rf.kind === "証拠" ? "証拠説明書の標目" : "文書名";
   $("rf-docname").value = rf.docName;
   $("rf-docname").classList.toggle("is-flagged", flagDoc);
@@ -1426,15 +1426,15 @@ function renderReview() {
   renderNumMismatch(rf);
   renderExplanationFields(rf);
 
-  // UX-17: 現在値がAIの元の値と異なるフィールドにだけ差分ヒント＋「AIの値に戻す」を表示
+  // 現在値がAIの元の値と異なるフィールドにだけ差分ヒント＋「AIの値に戻す」を表示
   renderAiOriginalHint("rf-kind-orig", rf, "kind", rf.kind);
   renderAiOriginalHint("rf-docname-orig", rf, "docName", rf.docName);
   renderAiOriginalHint("rf-suggested-orig", rf, "suggested", rf.suggested);
   renderAiOriginalHint("rf-evnum-orig", rf, "evidenceNumber", rf.evidenceNumber);
 
-  // UX-16: 証拠番号つきのファイルにだけ「この証拠を外す」導線を出す
+  // 証拠番号つきのファイルにだけ「この証拠を外す」導線を出す
   $("rf-exclude-row").hidden = state.renameOnly || !rf.evidenceNumber;
-  // FB-20②: 枝番編集欄も証拠番号つきのファイルにだけ出す
+  // 枝番編集欄も証拠番号つきのファイルにだけ出す
   // 刑事（弁/検）は枝番を使わないので枝番の編集欄も出さない
   $("rf-branch-field").hidden = state.renameOnly || !rf.evidenceNumber || isCriminalEvidenceNum(rf.evidenceNumber);
   // 「証拠」なのに番号が空＝証拠一覧に並ばない状態を明示し、番号入力を促す
@@ -1474,7 +1474,7 @@ function renderReview() {
     metaRows.appendChild(row);
   });
 
-  // FB-19: Word文書に「保存時に個人情報を削除」設定が無ければ、Word直接PDF化での情報漏れを警告
+  // Word文書に「保存時に個人情報を削除」設定が無ければ、Word直接PDF化での情報漏れを警告
   // （削除操作は不要＝LegalLeaves経由の出力では常に消える。気づきのための表示のみ）。
   if (rf.officeMeta && rf.officeMeta.removePersonalInfo === false) {
     const warn = document.createElement("div");
@@ -1499,7 +1499,7 @@ function renderReview() {
     metaRows.appendChild(warn);
   }
 
-  // SEC-C13: PDF内の能動的コンテンツ（JavaScript・埋め込みファイル・入力フォーム等）を知らせる。
+  // PDF内の能動的コンテンツ（JavaScript・埋め込みファイル・入力フォーム等）を知らせる。
   // メタデータ削除では消えない要素なので、把握したうえで提出するかを弁護士が判断できるようにする。
   // **削除はしない**（証拠の中身を変えないため）。
   if (Array.isArray(rf.activeContent) && rf.activeContent.length) {
@@ -1527,7 +1527,7 @@ function renderReview() {
 // user has ticked every 要確認 file off.
 function renderReviewProgress() {
   const rfs = state.reviewFiles;
-  const flagged = rfs.filter((r) => fileNeedsResolution(r)).length; // UX-30: 二択持ちも母数に含める
+  const flagged = rfs.filter((r) => fileNeedsResolution(r)).length; // 二択持ちも母数に含める
   const remaining = rfs.filter((r) => needsAttention(r)).length;
   const nextBtn = $("review-next-btn");
   nextBtn.disabled = remaining > 0;
@@ -1586,14 +1586,14 @@ function renderExport() {
   });
 
   $("make-subfolder-checkbox").checked = state.makeSubfolder;
-  // FB-16⑤: リネームのみモードはプレビュー対象（押印・結合）が無いので、チェックしても
+  // リネームのみモードはプレビュー対象（押印・結合）が無いので、チェックしても
   // 何も起きない「作成前にプレビューで確認する」行ごと隠す
   $("preview-toggle-row").hidden = state.renameOnly;
   $("preview-toggle-checkbox").checked = state.previewEnabled;
   $("export-next-btn").textContent = state.previewEnabled && !state.renameOnly && hasPreviewableOutput() ? "プレビューして作成" : "提出用ファイルを作成";
   $("export-next-btn").disabled = !state.outputFolder || !state.reviewFiles.length;
 
-  // UX-22: サブフォルダを作る場合、実際にファイルが置かれるフォルダを明示する
+  // サブフォルダを作る場合、実際にファイルが置かれるフォルダを明示する
   const finalPathEl = $("output-final-path");
   if (state.outputFolder && state.makeSubfolder) {
     finalPathEl.hidden = false;
@@ -1611,7 +1611,7 @@ function renderExport() {
   // Pattern A: an existing 証拠説明書 was read -> make it explicit that we don't generate.
   $("expl-existing-note").hidden = !(state.explanationExists && hasEvidenceFiles() && !state.renameOnly);
 
-  // UX-18: 証拠説明書を生成するとき、未入力（●●）の残数を出力前に表示する。
+  // 証拠説明書を生成するとき、未入力（●●）の残数を出力前に表示する。
   // 未入力があればPDFは作らずWordのみになる旨も添える（プレビューは廃止）。
   const blankNote = $("expl-blank-note");
   if (canGenerate && state.generateExplanation) {
@@ -1681,7 +1681,7 @@ function renderOutputCheck() {
   }
 }
 
-// UX-18: 生成予定の証拠説明書データ内に残る未入力マーカー（●●）の数。Word/PDF変換を
+// 生成予定の証拠説明書データ内に残る未入力マーカー（●●）の数。Word/PDF変換を
 // 伴わない軽い処理なので、出力画面で常時計算してよい。
 function explanationBlankCount() {
   try {
@@ -1691,14 +1691,14 @@ function explanationBlankCount() {
   }
 }
 
-// UX-21: 「作成」を押すと何が行われるかの事前サマリ（実際の出力計画から集計する）
+// 「作成」を押すと何が行われるかの事前サマリ（実際の出力計画から集計する）
 function renderExportSummary() {
   const el = $("export-summary");
   el.innerHTML = "";
   if (!state.reviewFiles.length) return;
   const outputs = buildOutputPlan();
   const parts = [];
-  // UX-18: 証拠説明書はWord必ず＋（未入力が無ければ）PDF。未入力ありならdocxのみ＝1ファイル。
+  // 証拠説明書はWord必ず＋（未入力が無ければ）PDF。未入力ありならdocxのみ＝1ファイル。
   const willGenExpl = state.generateExplanation && !state.renameOnly && !state.explanationExists && hasEvidenceFiles();
   const explCount = willGenExpl ? (explanationBlankCount() > 0 ? 1 : 2) : 0;
   parts.push(`作成予定: ${outputs.length + explCount}ファイル`);
@@ -1716,7 +1716,7 @@ function renderExportSummary() {
     (n, rf) => n + (rf.metadata || []).filter((m) => m.action === "delete").length, 0
   );
   if (metaDeletes) parts.push(`メタデータ削除: ${metaDeletes}項目`);
-  // UX-18: 未入力（●●）が残っていればPDFは作らずWordのみ
+  // 未入力（●●）が残っていればPDFは作らずWordのみ
   if (explCount) {
     parts.push(explanationBlankCount() > 0 ? "証拠説明書: Wordのみ作成（未入力あり）" : "証拠説明書: Word＋PDFを作成");
   }
@@ -1732,7 +1732,7 @@ function hasEvidenceFiles() {
   return state.reviewFiles.some((rf) => rf.evidenceNumber);
 }
 
-// UX-18: 証拠説明書の閲覧専用プレビュー（openExplPreview等）は廃止した。代わりに出力画面で
+// 証拠説明書の閲覧専用プレビュー（openExplPreview等）は廃止した。代わりに出力画面で
 // 未入力（●●）残数を表示し、未入力があればPDF化を省いてWordのみ出力する（main.js側で判定）。
 
 function renderDone() {
@@ -1740,7 +1740,7 @@ function renderDone() {
   const okCount = (result.written || []).length;
   const ngCount = (result.errors || []).length;
 
-  // UX-19: 成功／一部失敗／全件失敗で見出し・色を出し分ける（固定見出しだと失敗を見逃す）
+  // 成功／一部失敗／全件失敗で見出し・色を出し分ける（固定見出しだと失敗を見逃す）
   const mark = $("done-mark");
   const heading = $("done-heading");
   if (ngCount === 0) {
@@ -1757,7 +1757,7 @@ function renderDone() {
     heading.textContent = "ファイルを作成できませんでした";
   }
 
-  // UX-10: 実際に作成されたフォルダ（サブフォルダ込み）を一覧の上に表示
+  // 実際に作成されたフォルダ（サブフォルダ込み）を一覧の上に表示
   const dest = $("done-dest");
   const dir = result.outputDir || state.outputFolder;
   dest.hidden = !dir;
@@ -1784,7 +1784,7 @@ function renderDone() {
     }
   }
 
-  // SEC-C1: 案件ファイルは提出フォルダではなくアプリ内（userData/cases）に保存される
+  // 案件ファイルは提出フォルダではなくアプリ内（userData/cases）に保存される
   const cf = $("done-casefile");
   if (result.caseFileSaved) {
     cf.hidden = false;
@@ -1831,7 +1831,7 @@ function renderUploadSizeNote(written) {
 }
 
 // Suggested (提出用) name for a chosen 標目: 号証(_枝番)_標目 when numbered, else just 標目.
-// UX-17-3: 枝番（branchRange）を落とすと、同一号証の枝番違いが同名になってしまう
+// 枝番（branchRange）を落とすと、同一号証の枝番違いが同名になってしまう
 // （「別々に出力」やAVでは rf.suggested がそのまま出力名になる）。mergeDestName と同じ
 // 「号証番号_枝番_タイトル」の並びで組み立てる。
 function suggestedForTitle(rf, title) {
@@ -1863,7 +1863,7 @@ function setAuthorSource(src) {
   advanceToNextAttention(); // 二択を選び切って要確認でなくなったら次の要確認へ
   renderReview();
 }
-// UX-31: 作成者表記の一括適用。実名は役割ごとに文字列が異なるので、各ファイルが元々持つ
+// 作成者表記の一括適用。実名は役割ごとに文字列が異なるので、各ファイルが元々持つ
 // authorAlt/authorPrimaryをそのまま使う（「役割名か実名か」の種類だけを一括で揃える）。
 function bulkAuthorTargets() {
   return state.reviewFiles.filter((r) => r.authorAlt && !state.renameOnly);
@@ -1872,7 +1872,7 @@ function applyBulkAuthor(src) {
   for (const rf of bulkAuthorTargets()) applyAuthorSource(rf, src);
   renderReview();
 }
-// UX-37: 「確認しました」チェックで解決する確認（＝二択を持たない要確認ファイル）を対象に、
+// 「確認しました」チェックで解決する確認（＝二択を持たない要確認ファイル）を対象に、
 // まとめて確認済みにする。二択（押印・作成者）は実際の選択が要るので対象外。
 function bulkConfirmTargets() {
   return state.reviewFiles.filter((rf) => {
@@ -1966,7 +1966,7 @@ function shiftEvidenceNumbers(fromText, delta) {
   renderReview();
 }
 
-// FB-21②Phase2: 号証レベルの空き枠。その番号が既にファイルで埋まっているときだけ以降を
+// 号証レベルの空き枠。その番号が既にファイルで埋まっているときだけ以降を
 // 1つ繰り下げて割り込ませる。空いている番号（末尾・欠番）はそのまま空き枠を置く。
 function insertSlotAt(sym, num) {
   const slot = padEvidence(sym, num);
@@ -2121,7 +2121,7 @@ function unsplitPages() {
   state.selectedReview = Math.max(0, state.reviewFiles.indexOf(merged));
   renderReview();
 }
-// ---------- UX-17: AIの値に戻す（フィールド単位＋全体） ----------
+// ---------- AIの値に戻す（フィールド単位＋全体） ----------
 // アンドゥではなく「AI照合直後のスナップショット(rf.aiOriginal)へ直接戻す」単純な初期化。
 function restoreAiOriginal(key) {
   const rf = state.reviewFiles[state.selectedReview];
@@ -2145,7 +2145,7 @@ function restoreAiOriginal(key) {
   }
   renderReview();
 }
-// FB-21②: 枝番グループが1件だけになったら（枝番の空き枠も無ければ）、その枝番を外して
+// 枝番グループが1件だけになったら（枝番の空き枠も無ければ）、その枝番を外して
 // 単独の号証に戻す。甲3の1・甲3の2があって甲3の2を外したら、甲3の1ではなく甲3にする。
 // 除外・番号外し・枝番の空き枠削除の後にだけ呼ぶ（AIデータや未読み込みの相方は触らない）。
 function normalizeBranches() {
@@ -2168,7 +2168,7 @@ function normalizeBranches() {
   }
 }
 
-// ---------- UX-16: この証拠を外す（番号が空いたら繰り上げをワンクリック提案） ----------
+// ---------- この証拠を外す（番号が空いたら繰り上げをワンクリック提案） ----------
 // 空いた番号より後ろの証拠があれば、詰めるかどうかを人に確認する（自動・無言では詰めない
 // ＝「後で同じ番号に別の証拠を入れたい」ケースを壊さないため）。
 async function offerCloseGap(sym, num) {

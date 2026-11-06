@@ -69,6 +69,8 @@ npm run dist        # 説明書PDF（Edge で印刷）→ インストーラ
 ```
 
 `py\build\out\LegalLeaves-Setup-<版>.exe` と、ハッシュ値の控え（`.sha256.txt`）ができる。
+版の番号は `py/legalleaves/__init__.py` の `__version__` が正（`npm version <版> --no-git-tag-version` で `package.json` もそろえる）。
+変更の記録は `docs/CHANGELOG.md`（5.0.0 以降・公開）に書く。4.1.0 以前の詳しい記録は `docs/CHANGELOG-old.md`（公開しない）。
 ハッシュ値は配布物とは別の経路（メール本文など）で伝える。操作説明書の PDF（`dist\LegalLeaves 操作説明書.pdf`）は
 `build\make-manual-pdf.js` が Windows 内蔵の Microsoft Edge で印刷して作り、インストーラに同梱する。
 NSIS 3（makensis.exe）が必要（PATH・既定の場所・electron-builder のキャッシュの順に探す。

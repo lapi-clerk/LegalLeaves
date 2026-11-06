@@ -184,7 +184,7 @@ class Api:
         return winutil.open_path(path)
 
     def open_case_file(self):
-        # FB-1 凍結（2026-07-15）: 案件ファイル（作業の保存・再開）は使わない。画面のボタンも隠してある。
+        # 停止中: 案件ファイル（作業の保存・再開）は使わない。画面のボタンも隠してある。
         return {"error": "「前回の作業を開く」は現在停止しています。"}
 
 

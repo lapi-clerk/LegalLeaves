@@ -1,13 +1,13 @@
 // ---------------------------------------------------------------------------
 // 出力の確定（提出ファイルの書き出し）と案件ファイルの組み立て
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
-// ※案件ファイル（FB-1）は画面上は凍結中だが、将来の再開用にコードを保持している。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
+// ※案件ファイルは画面上は凍結中だが、将来の再開用にコードを保持している。
 // ---------------------------------------------------------------------------
 
 // ---------- output / preview ----------
 
-// ---------- FB-1: 案件ファイル（作業の保存・再開） ----------
+// ---------- 案件ファイル（作業の保存・再開） ----------
 // The case file stores the FINALIZED review state as a synthetic AI contract plus a
 // name->path map of the originals. Reopening feeds it straight back through
 // buildReviewFiles(), so matching, manual assignment and warnings for moved/missing
@@ -49,7 +49,7 @@ function buildCaseFile() {
     const keep = (rf.metadata || []).filter((m) => m.action === "keep").map((m) => m.key);
     if (keep.length) metadataKeep[rf.name] = keep;
   }
-  // SEC-C1: baseName はアプリ内保存時のファイル名（例「案件ファイル(甲001～甲006)」）に使う
+  // baseName はアプリ内保存時のファイル名（例「案件ファイル(甲001～甲006)」）に使う
   const range = evidenceRangeLabel(state.reviewFiles);
   return {
     type: "legalleaves-case",
@@ -95,8 +95,8 @@ async function commitOutputs(outputs) {
       makeSubfolder: state.makeSubfolder,
       renameOnly: state.renameOnly,
       explanation,
-      // FB-1凍結（2026-07-15）: 案件ファイルの自動保存を停止。作業データが無意識にPCへ
-      // 残ることが事務所ポリシー上望ましくないため。buildCaseFile()等のコードは
+      // 案件ファイルの自動保存は停止している。作業データが知らないうちにパソコンへ
+      // 残らないようにするため。buildCaseFile()等のコードは
       // 将来の再開（v4）用に保持している。
       caseFile: null,
     });

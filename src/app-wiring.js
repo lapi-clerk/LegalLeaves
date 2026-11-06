@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // イベント配線と初期化（画面の「つなぎこみ」だけを持つファイル）
 //
-// 監査⑥の分割で、定義はすべて app-state / app-evidence / app-screens / app-review /
+// 分割したので、定義はすべて app-state / app-evidence / app-screens / app-review /
 // app-preview / app-explanation / app-output へ移した。ここに残すのは
 // 「どのボタンが何を呼ぶか」という配線と、起動時の初期化のみ。
 //
@@ -32,7 +32,7 @@ $("clear-files-btn").addEventListener("click", () => {
   update();
 });
 
-// FB-1: reopen a saved batch. The case file's contract goes through the normal
+// reopen a saved batch. The case file's contract goes through the normal
 // pipeline (aiText -> buildReviewFiles), so missing originals surface as the usual
 // orphan warnings with manual assignment, and everything stays editable.
 $("open-case-btn").addEventListener("click", async () => {
@@ -47,7 +47,7 @@ $("open-case-btn").addEventListener("click", async () => {
 
   state.files = res.existing.map((f) => ({ path: f.path, name: f.name, type: guessType(f.name), metaFields: null, metaError: null }));
   state.aiText = JSON.stringify(cf.contract);
-  state.aiCardCollapsed = true; // UX-3: 復元時も生JSONは畳んで受領カードに
+  state.aiCardCollapsed = true; // 復元時も生JSONは畳んで受領カードに
   $("ai-textarea").value = state.aiText;
   state.renameOnly = !!settings.renameOnly;
   $("rename-only-checkbox").checked = state.renameOnly;
@@ -110,7 +110,7 @@ $("ai-textarea").addEventListener("input", (e) => {
   update();
 });
 
-// UX-3: テキストエリアへの直接貼り付け（Ctrl+V）でも、成功していれば受領カードに畳む。
+// テキストエリアへの直接貼り付け（Ctrl+V）でも、成功していれば受領カードに畳む。
 // input（手編集）では畳まない＝編集の邪魔をしない。
 $("ai-textarea").addEventListener("paste", () => {
   setTimeout(() => {
@@ -121,7 +121,7 @@ $("ai-textarea").addEventListener("paste", () => {
   }, 0);
 });
 
-// UX-3: 受領カードの操作
+// 受領カードの操作
 $("ai-receipt-show").addEventListener("click", () => {
   state.aiCardCollapsed = false;
   update();
@@ -136,7 +136,7 @@ $("ai-receipt-clear").addEventListener("click", () => {
 
 $("copy-prompt-btn").addEventListener("click", async () => {
   const btn = $("copy-prompt-btn");
-  // FB-16⑦: リネームのみモードでは、スタンプ配置・証拠説明書下書きの指示を省いた
+  // リネームのみモードでは、スタンプ配置・証拠説明書下書きの指示を省いた
   // 軽量プロンプト（ファイル名の決定だけを頼む）をコピーする＝AIの応答が速くなる
   const ok = await window.api.copyPrompt(state.renameOnly);
   const original = btn.textContent;
@@ -166,7 +166,7 @@ $("paste-btn").addEventListener("click", async () => {
   if (text && text.trim()) {
     state.aiText = text;
     validateAiJson();
-    if (!state.aiJsonError) state.aiCardCollapsed = true; // UX-3: 成功時は受領カードに畳む
+    if (!state.aiJsonError) state.aiCardCollapsed = true; // 成功時は受領カードに畳む
   } else {
     state.aiText = "";
     state.aiJsonError = "クリップボードにテキストが見つかりませんでした。";
@@ -260,7 +260,7 @@ document.querySelectorAll(".ai-orig-restore").forEach((btn) => {
 });
 
 // 全体初期化: JSONを貼り直さずに、確認画面での手動修正をすべて取り消す
-// UX-17-5: window.confirm はElectronで閉じた直後にフォーカスが戻らず、セレクト等が
+// window.confirm はElectronで閉じた直後にフォーカスが戻らず、セレクト等が
 // 反応しなくなる（他のウィンドウに切り替えると復帰＝実機report）。ウィンドウ所有の
 // ネイティブダイアログ（main側で focus() も行う）に置き換える。
 $("review-reset-all-btn").addEventListener("click", async () => {
@@ -271,7 +271,7 @@ $("review-reset-all-btn").addEventListener("click", async () => {
     okLabel: "実行する",
   });
   if (!ok) return;
-  // UX-16①: 「ファイルごと除外」も編集の一種として、まとめて取り消す（復元する）
+  // 「ファイルごと除外」も編集の一種として、まとめて取り消す（復元する）
   if (state.excludedFiles.length) {
     const have = new Set(state.files.map((f) => f.path));
     state.files = [...state.files, ...state.excludedFiles.filter((f) => f && !have.has(f.path))];
@@ -292,7 +292,7 @@ $("rf-remove-file-btn").addEventListener("click", async () => {
   });
   if (!ok) return;
   const p = parseEvidenceNumber(rf.evidenceNumber);
-  // UX-16①: 「編集をすべて取り消す」で復元できるよう、除外前のエントリを退避しておく
+  // 「編集をすべて取り消す」で復元できるよう、除外前のエントリを退避しておく
   const entry = state.files.find((f) => f.path === rf.path);
   if (entry) state.excludedFiles.push(entry);
   removeFile(rf.path); // state.files から除去（matchKeyも破棄される）
@@ -333,7 +333,7 @@ $("rf-kind").addEventListener("change", (e) => {
       focusEvnum = true;
     }
   }
-  renderReview(); // UX-17-1: select要素なのでキャレット問題なし＝ヒント含め全体を更新
+  renderReview(); // select要素なのでキャレット問題なし＝ヒント含め全体を更新
   if (focusEvnum) { const el = $("rf-evnum-input"); if (el) el.focus(); }
 });
 $("rf-docname").addEventListener("input", (e) => {
@@ -348,13 +348,13 @@ $("rf-docname").addEventListener("input", (e) => {
     $("rf-suggested").value = rf.suggested;
     renderAiOriginalHint("rf-suggested-orig", rf, "suggested", rf.suggested);
   }
-  renderAiOriginalHint("rf-docname-orig", rf, "docName", rf.docName); // UX-17-1
+  renderAiOriginalHint("rf-docname-orig", rf, "docName", rf.docName);
 });
 $("rf-suggested").addEventListener("input", (e) => {
   const rf = state.reviewFiles[state.selectedReview];
   if (!rf) return;
   rf.suggested = e.target.value;
-  renderAiOriginalHint("rf-suggested-orig", rf, "suggested", rf.suggested); // UX-17-1
+  renderAiOriginalHint("rf-suggested-orig", rf, "suggested", rf.suggested);
   renderNumMismatch(rf);
 });
 // 食い違いの知らせは、入力中は出さず、Enter か欄を離れたとき（確定）に出す
@@ -460,7 +460,7 @@ $("rf-evnum-input").addEventListener("change", (e) => {
   renderEvidenceDerived(rf);
   renderEvidenceList(state.selectedReview); // 正規化後の番号・グループを一覧へ反映
 });
-// FB-20②: 枝番の編集。結合順・結合ファイル名は rf.branchRange から算出されるのでこれで反映。
+// 枝番の編集。結合順・結合ファイル名は rf.branchRange から算出されるのでこれで反映。
 // 単一スタンプのファイルはスタンプ側の枝番（＝印字ラベルの「の◯」）も揃える。
 $("rf-branch-input").addEventListener("input", (e) => {
   const rf = state.reviewFiles[state.selectedReview];
@@ -472,7 +472,7 @@ $("rf-branch-input").addEventListener("input", (e) => {
   renderEvidenceList(state.selectedReview); // 枝番の入れ子表示も即時反映
 });
 
-// FB-16②: 照合を飛ばして来た場合は「戻る」も読み込みへ直帰する
+// 照合を飛ばして来た場合は「戻る」も読み込みへ直帰する
 const reviewGoBack = () => goStep(state.matchSkipped ? "start" : "match");
 $("review-back-btn").addEventListener("click", reviewGoBack);
 $("review-back-top-btn").addEventListener("click", reviewGoBack);
@@ -516,7 +516,7 @@ folderDropzone.addEventListener("drop", async (e) => {
 
 $("make-subfolder-checkbox").addEventListener("change", (e) => {
   state.makeSubfolder = e.target.checked;
-  renderExport(); // UX-22: 実際の保存先表示を追従
+  renderExport(); // 実際の保存先表示を追従
 });
 
 $("preview-toggle-checkbox").addEventListener("change", (e) => {
@@ -527,7 +527,7 @@ $("preview-toggle-checkbox").addEventListener("change", (e) => {
 
 $("gen-expl-checkbox").addEventListener("change", (e) => {
   state.generateExplanation = e.target.checked;
-  renderExport(); // UX-18/21: プレビューボタン表示とサマリを追従
+  renderExport(); // プレビューボタン表示とサマリを追従
 });
 
 $("export-back-btn").addEventListener("click", () => goStep("review"));
@@ -561,7 +561,7 @@ $("export-next-btn").addEventListener("click", async () => {
 });
 
 $("preview-commit-btn").addEventListener("click", () => {
-  // FB-11: プレビュー中のドラッグ・向き・押印の編集は rf.stamps に書き戻されているので、
+  // プレビュー中のドラッグ・向き・押印の編集は rf.stamps に書き戻されているので、
   // 承認時に計画を作り直してから焼き込む（開いた時点のスナップショットを使わない）。
   commitOutputs(buildOutputPlan());
 });
@@ -608,14 +608,14 @@ document.querySelectorAll(".step-button").forEach((btn) => {
 
 $("help-btn").addEventListener("click", async () => {
   $("help-modal-overlay").hidden = false;
-  // UX-13/14: データの保存場所を表示
+  // データの保存場所を表示
   try {
     const info = await window.api.getAppDataInfo();
     $("help-data-path").textContent = `保存先フォルダ: ${info.userDataPath}`;
   } catch (_) {}
 });
 
-// UX-13/14: データの削除操作
+// データの削除操作
 $("open-appdata-btn").addEventListener("click", () => window.api.openAppDataDir());
 $("delete-recent-btn").addEventListener("click", async () => {
   if (!(await window.api.confirmDialog({ message: "最近使ったフォルダの履歴を削除します（依頼者名などを含むパスの履歴が消えます）。よろしいですか？", okLabel: "削除する" }))) return;
@@ -624,9 +624,9 @@ $("delete-recent-btn").addEventListener("click", async () => {
   state.outputFolder = "";
   update();
 });
-// FB-1凍結: 「案件ファイルを削除」ボタンは、案件ファイルの自動保存停止＋起動時清掃に伴い撤去
+// 「案件ファイルを削除」ボタンは、案件ファイルの自動保存停止＋起動時清掃に伴い撤去
 // （delete-app-data-item("cases") のIPC自体は将来の再開用に保持）。
-// 監査#9: 取り消せない操作なので、確認はmainプロセスのネイティブダイアログに一本化する
+// 取り消せない操作なので、確認はmainプロセスのネイティブダイアログに一本化する
 // （削除される実際のフォルダのパスまで示す・既定はキャンセル）。画面側で二重に聞かない。
 $("delete-appdata-btn").addEventListener("click", async () => {
   await window.api.deleteAllAppData();
@@ -642,7 +642,7 @@ $("firm-notes-btn").addEventListener("click", async () => {
   $("firm-notes-status").textContent = "";
   $("firm-notes-overlay").hidden = false;
   $("firm-notes-textarea").focus();
-  // UX-13: 実際の保存先パスを表示（保存場所が分からない不安への対応）
+  // 実際の保存先パスを表示（保存場所が分からない不安への対応）
   try {
     const info = await window.api.getAppDataInfo();
     $("firm-notes-path").textContent = `保存先: ${info.firmNotesPath}`;

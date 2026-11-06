@@ -155,8 +155,8 @@ const merged = ctx.mergeMetaResult(
     activeContent: ["JavaScript"], overA3: { wmm: 594, hmm: 420 } });
 check("メタデータ項目", Array.isArray(merged.metaFields) && merged.metaFields.length === 1);
 check("Wordの個人情報フラグ", !!merged.officeMeta);
-check("能動的コンテンツ（SEC-C13）", Array.isArray(merged.activeContent));
-check("A3超の寸法（UX-42）", !!merged.overA3 && merged.overA3.wmm === 594);
+check("能動的コンテンツ", Array.isArray(merged.activeContent));
+check("A3超の寸法", !!merged.overA3 && merged.overA3.wmm === 594);
 check("結果が無ければ元のまま", ctx.mergeMetaResult({ name: "a" }, undefined).name === "a");
 check("PDFのページ数（ページで枝番に分ける）", ctx.mergeMetaResult({ name: "a" }, { pageCount: 7 }).pageCount === 7);
 
@@ -528,7 +528,7 @@ section("ファイル名の番号と証拠番号を、ボタンで片方に合�
   S.reviewFiles = [];
 }
 
-// 取り込み経路は2つある。片方だけ項目を足すと警告が出なくなる（実際にUX-42で発生した）ので、
+// 取り込み経路は2つある。片方だけ項目を足すと警告が出なくなる（実際に A3 超の警告で発生した）ので、
 // 両方が集約関数を通っていることをソースで確認する。
 {
   const src = fs.readFileSync(path.join(SRC_DIR, "app-state.js"), "utf8");

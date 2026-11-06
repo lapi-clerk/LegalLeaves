@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // 証拠説明書のデータ組み立て
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
-// 号証欄の表記・全角半角の使い分けは改正民訴法の公式ひな形に準拠（docs/CHANGELOG.md 3.5.0 参照）。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
+// 号証欄の表記・全角半角の使い分けは改正民訴法の公式ひな形に準拠（docs/CHANGELOG-old.md 3.5.0 参照）。
 // ---------------------------------------------------------------------------
 
 function explanationBaseName(rfs) {
@@ -26,7 +26,7 @@ function buildExplanationData() {
   const mk = (v) => (v && String(v).trim() ? v : BLANK);
   const rows = [];
   // One row per file = one row per 枝番 (乙041-1 / 乙041-2 are separate rows).
-  // FB-21②Phase2: プレースホルダ（空き枠）も号証番号順に混ぜて、空行（●●）として出力する
+  // プレースホルダ（空き枠）も号証番号順に混ぜて、空行（●●）として出力する
   // （「後で来る証拠のために証拠説明書に空きを作っておく」用途）。
   const fileUnits = state.reviewFiles
     .filter((rf) => rf.evidenceNumber && parseEvidenceNumber(rf.evidenceNumber))
@@ -53,7 +53,7 @@ function buildExplanationData() {
     const rf = u.rf;
     const p = u.p;
     if (p && !symbol) symbol = p.sym;
-    // FB-14案B: 写真・スクリーンショット・動画も公式ひな形どおり通常の6列で記載する。
+    // 写真・スクリーンショット・動画も公式ひな形どおり通常の6列で記載する。
     // 民訴規則148条（撮影対象・日時・場所の明示）は、標目=種別＋撮影対象（写真・動画は場所も）、
     // 作成年月日=撮影日時、作成者=撮影者で満たす（※3: もともとの作成者・作成日＝撮影者・撮影日）。
     const kind = rf.captureKind || "";
@@ -92,7 +92,7 @@ function buildExplanationData() {
     const bikou = !oc && rf.digitizedFromPaper ? "紙を電子化" : "";
     for (const branch of branchesForRows) {
       rows.push({
-        通常: true, // FB-14案B: 写真・スクショ・動画も通常の6列（結合行テンプレは廃止）
+        通常: true, // 写真・スクショ・動画も通常の6列（結合行テンプレは廃止）
         号証: explanationEvidenceLabel(rf.evidenceNumber, branch || null),
         標目: hyomoku,
         作成年月日: createdDate,
@@ -109,7 +109,7 @@ function buildExplanationData() {
     : toFullWidth(ci.lawyers || "");
   // 訴訟なら原告/被告、申立てなら申立人/相手方。
   const party = ci.party || sideFromSym || "";
-  // 新法対応ヘッダ（FB-14）: 「{裁判所}　{事件番号}」1行＋提出日＋提出者側・代理人のみ。
+  // 新法対応ヘッダ: 「{裁判所}　{事件番号}」1行＋提出日＋提出者側・代理人のみ。
   // 事件名・当事者氏名・「御中」は公式ひな形に無いため書かない。
   return {
     事件番号: toFullWidth(ci.case_number) || "令和●年（●）第●号",
@@ -129,7 +129,7 @@ function buildExplanationData() {
 // AI's suggested_base_name for this.
 function evidenceRangeLabel(rfs) {
   const parsed = rfs.map((rf) => parseEvidenceNumber(rf.evidenceNumber)).filter(Boolean);
-  // FB-21②Phase2: 空き枠（プレースホルダ）も範囲に含める（証拠説明書に空行が出るため）
+  // 空き枠（プレースホルダ）も範囲に含める（証拠説明書に空行が出るため）
   for (const ph of state.placeholders || []) {
     const p = parseEvidenceNumber(ph.num);
     if (p) parsed.push(p);

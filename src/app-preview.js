@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// プレビュー（FB-11: PDF.js＋スタンプのオーバーレイ）
+// プレビュー（PDF.js＋スタンプのオーバーレイ）
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
 // クラシックスクリプトなのでグローバルスコープを共有する（app.js から普通に呼べる）。
 // このファイルは定義のみ。イベント配線は app.js 側に残している（読み込み順の意味を保つため）。
 // ---------------------------------------------------------------------------
 
-// ---------- FB-11: インタラクティブ・プレビュー（PDF.js＋スタンプオーバーレイ） ----------
+// ---------- インタラクティブ・プレビュー（PDF.js＋スタンプオーバーレイ） ----------
 // プレビュー対象は「スタンプ・回転を一切適用しないベースPDF」（既存パイプラインで生成）。
 // スタンプはHTMLオーバーレイ、回転はPDF.jsのviewport回転で表現するので、位置・向き・押印の
 // 変更は再生成なしで即時反映される。焼き込みは「承認して書き出す」時に pdf-engine が一度だけ
@@ -227,7 +227,7 @@ function pvLayoutOverlay(n) {
     overlay.appendChild(note);
   }
 
-  // FB-6: 裁判所タイムスタンプ帯（mints提出後に出力1ページ目へ付される・実測値）を半透明表示。
+  // 裁判所タイムスタンプ帯（mints提出後に出力1ページ目へ付される・実測値）を半透明表示。
   // 帯は用紙上端からの物理位置なので pt 基準で描く（横向き画像ページ等でも正しい位置になる）。
   if (n === 1) {
     const sc = entry.scale; // px per pt
@@ -429,7 +429,7 @@ async function setPreviewRotate(deg) {
 }
 // v5.2.1: 出力前プレビューで証拠説明書の中身を見せるか。作る設定で、立証趣旨が1つでも書かれているとき
 // （AIが書いたものでも、確認画面で書いたものでも）。以前（v3.10）の Word→PDF に変換して見せるプレビューは
-// 重いので撤去した（docs/ux-review.md UX-18）。ここでは組み立てたデータを表にするだけなので軽い。
+// 重いので撤去した。ここでは組み立てたデータを表にするだけなので軽い。
 function explanationPreviewAvailable() {
   return !!state.generateExplanation && !state.renameOnly && !state.explanationExists && hasEvidenceFiles()
     && state.reviewFiles.some((rf) => rf.evidenceNumber && String(rf.proofPurpose || "").trim());
@@ -535,7 +535,7 @@ function renderPreviewModal(errors) {
   renderPreviewStampControls();
 }
 
-// FB-11: プレビューには「スタンプ・回転を一切適用しないベースPDF」を作らせる
+// プレビューには「スタンプ・回転を一切適用しないベースPDF」を作らせる
 // （deep copyで各sourceのstampsを[]に。結合・Office変換・画像A4化・正規化はそのまま効く）。
 // ただし画像だけは例外: 回転をライブ適用すると白帯が横へ逃げて番号が崩れるため、回転のみ
 // ベースPDFへ焼き込む（ラベルは従来どおりオーバーレイ）。→ プレビューは回転後の正立紙面になる。
@@ -584,7 +584,7 @@ function closeHelpModal() {
 }
 
 
-// PDF.jsの1ページを canvas へ描画する共通処理（FB-11プレビューとFB-15確認画面プレビューで共用）。
+// PDF.jsの1ページを canvas へ描画する共通処理（出力前プレビューと確認画面の元ファイルプレビューで共用）。
 // rotation は「合計回転の置き換え指定」（省略時は元PDFの/Rotateどおり）。内部解像度はdevicePixelRatio対応。
 async function renderPdfPage(page, canvas, { width, rotation, maxScale } = {}) {
   const vp1 = page.getViewport(rotation == null ? { scale: 1 } : { scale: 1, rotation });

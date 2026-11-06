@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // 画面遷移と「読み込み」「照合」画面の描画
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
 // ---------------------------------------------------------------------------
 
 function goStep(step) {
@@ -30,7 +30,7 @@ function renderStepNav() {
     btn.classList.toggle("is-done", i < state.maxReachedIndex);
     btn.classList.toggle("is-locked", i > state.maxReachedIndex);
     btn.querySelector(".step-num").textContent = i < state.maxReachedIndex ? "✓" : String(i + 1);
-    // UX-24: 現在のステップと未到達（ロック）状態を支援技術にも伝える
+    // 現在のステップと未到達（ロック）状態を支援技術にも伝える
     if (i === idx) btn.setAttribute("aria-current", "step");
     else btn.removeAttribute("aria-current");
     btn.setAttribute("aria-disabled", i > state.maxReachedIndex ? "true" : "false");
@@ -59,7 +59,7 @@ function update() {
 
 function hintMessage() {
   if (state.aiJsonError) return state.aiJsonError;
-  // FB-16: リネームのみモードはAIデータなしでも進める（メタデータ削除ユーティリティとして）
+  // リネームのみモードはAIデータなしでも進める（メタデータ削除ユーティリティとして）
   if (state.renameOnly) {
     return state.files.length ? "" : "ファイルを追加してください";
   }
@@ -78,9 +78,9 @@ function removeFile(path) {
 function renderStart() {
   $("file-count-pill").textContent = `${state.files.length}件`;
   $("clear-files-btn").hidden = state.files.length === 0;
-  $("copy-names-row").hidden = state.files.length === 0; // UX-41: ファイル名リストのコピーは読み込み後に
+  $("copy-names-row").hidden = state.files.length === 0; // ファイル名リストのコピーは読み込み後に
 
-  // UX-42: A3を超えるPDF（mintsはA4/A3のみ）は出力時にA3へ縮小する旨と、縮小で読み取りに支障が
+  // A3を超えるPDF（mintsはA4/A3のみ）は出力時にA3へ縮小する旨と、縮小で読み取りに支障が
   // 出る場合の選択肢（紙提出・記録外）を案内する。
   const oversize = state.files.filter((f) => f.overA3);
   if (oversize.length) {
@@ -116,7 +116,7 @@ function renderStart() {
   const ta = $("ai-textarea");
   if (ta.value !== state.aiText) ta.value = state.aiText;
 
-  // UX-3: 正常受領時は生JSONを畳んで受領カードを表示（畳むのは貼り付け操作の直後のみ。
+  // 正常受領時は生JSONを畳んで受領カードを表示（畳むのは貼り付け操作の直後のみ。
   // 「内容を見る」でテキストエリアに戻れる）。
   const hasValid = state.aiText.trim() !== "" && !state.aiJsonError;
   const showCard = hasValid && state.aiCardCollapsed;
@@ -125,7 +125,7 @@ function renderStart() {
   $("paste-btn").hidden = showCard;
   if (showCard) $("ai-receipt-sub").textContent = aiReceiptSummary();
 
-  // UX-15: JSONエラーは他の警告と同じバナー方式＋入力欄にも赤枠で「ここが原因」を示す
+  // JSONエラーは他の警告と同じバナー方式＋入力欄にも赤枠で「ここが原因」を示す
   const errEl = $("ai-json-error");
   if (state.aiJsonError) {
     $("ai-json-error-text").textContent = state.aiJsonError;
@@ -135,11 +135,11 @@ function renderStart() {
   }
   ta.classList.toggle("is-error", !!state.aiJsonError);
 
-  // FB-16: リネームのみモードはAIデータが空でも進める（元名のままメタデータ削除だけ行う）。
+  // リネームのみモードはAIデータが空でも進める（元名のままメタデータ削除だけ行う）。
   // AIデータが貼られているのに壊れている場合は通常どおりブロックする。
   const canProceed = state.files.length > 0 && !state.aiJsonError &&
     (state.renameOnly || state.aiText.trim() !== "");
-  // FB-16①②: 照合の相手（AIデータ）が無いときはボタンの行き先表示も「確認へ進む」にする。
+  // 照合の相手（AIデータ）が無いときはボタンの行き先表示も「確認へ進む」にする。
   // AIデータがあるときは照合してから、問題が無ければ確認へ直行する（行き先はまだ決まらない）ので
   // 「照合して進む」とする。※ここで skipMatchStep() を使わない（照合前なので判定できない）。
   const nextLabel = noAiData() ? "確認へ進む" : "照合して進む";
@@ -159,7 +159,7 @@ function renderStart() {
 function renderMatch() {
   const rfs = state.reviewFiles;
   const matchCount = rfs.filter((r) => r.matched).length;
-  const warnCount = rfs.filter((r) => needsAttention(r)).length; // UX-30: 二択持ちも「確認」に数える
+  const warnCount = rfs.filter((r) => needsAttention(r)).length; // 二択持ちも「確認」に数える
   const deleteCount = rfs.reduce((sum, r) => sum + r.metadata.filter((m) => m.action === "delete").length, 0);
 
   $("metric-filecount").textContent = String(state.files.length);
@@ -167,12 +167,12 @@ function renderMatch() {
   $("metric-warncount").textContent = String(warnCount);
   $("metric-deletecount").textContent = String(deleteCount);
 
-  // UX-6-1/UX-6-2: 未一致の分類。unmatchedRows＝読み込んだのにAIに無いファイル、
+  // 未一致の分類。unmatchedRows＝読み込んだのにAIに無いファイル、
   // orphans＝AIにあるのにファイルが無いエントリ。両者の組合せで案内を出し分ける。
   const orphans = state.orphanEntries || [];
   const unmatchedRows = rfs.filter((r) => !r.matched && !noAiData());
-  const forgotToLoad = orphans.length > 0 && unmatchedRows.length === 0; // UX-6-1: 読み込み忘れ
-  const forgotToSend = orphans.length === 0 && unmatchedRows.length > 0; // UX-6-2: 送信忘れ
+  const forgotToLoad = orphans.length > 0 && unmatchedRows.length === 0; // 読み込み忘れ
+  const forgotToSend = orphans.length === 0 && unmatchedRows.length > 0; // 送信忘れ
   const genuineAssign = orphans.length > 0 && unmatchedRows.length > 0;  // 表記ゆれ等の手動割当
 
   const banner = $("warn-banner");
@@ -190,7 +190,7 @@ function renderMatch() {
   const extra = $("extra-warnings");
   extra.innerHTML = "";
 
-  // UX-6-1: AIデータにあるファイルが読み込まれていない（＝読み込み忘れ）。割り当て先が
+  // AIデータにあるファイルが読み込まれていない（＝読み込み忘れ）。割り当て先が
   // 無いので「手動で割り当て」ではなく、読み込みへ戻る導線を強く出す。
   if (forgotToLoad) {
     const div = document.createElement("div");
@@ -216,7 +216,7 @@ function renderMatch() {
     extra.appendChild(div);
   }
 
-  // UX-6-2: 読み込んだファイルがAIデータに1件も無い（＝AIへの送信忘れ）。送り忘れの疑いが
+  // 読み込んだファイルがAIデータに1件も無い（＝AIへの送信忘れ）。送り忘れの疑いが
   // あるファイル名を1つのバナーに圧縮して表示する（各行の無意味なドロップダウンは出さない）。
   if (forgotToSend) {
     const div = document.createElement("div");
@@ -274,7 +274,7 @@ function renderMatch() {
   for (const r of rfs) {
     const row = document.createElement("div");
     row.className = "table-row" + (r.needsConfirmation ? " is-flagged" : "");
-    if (!r.matched || r.manualMatch) row.classList.add("has-assign"); // UX-6: 誘導先の目印
+    if (!r.matched || r.manualMatch) row.classList.add("has-assign"); // 誘導先の目印
 
     const main = document.createElement("div");
     main.className = "row-main";
@@ -290,7 +290,7 @@ function renderMatch() {
     if (r.matched) {
       suggestedCell.textContent = r.suggested;
     } else if (noAiData()) {
-      // FB-16: AIなしのリネームのみ＝元の名前のままメタデータ削除だけ行う（正常系）
+      // AIなしのリネームのみ＝元の名前のままメタデータ削除だけ行う（正常系）
       suggestedCell.textContent = r.suggested;
     } else {
       // Don't reuse the original name here — it looks like a match. Make the gap explicit.
@@ -306,7 +306,7 @@ function renderMatch() {
     row.appendChild(main);
 
     // Unmatched (or manually linked) rows get a control to link an AI entry by hand.
-    // UX-6-2: 割り当て候補が1件も無い未一致行は、使えないドロップダウンではなく1行の短い
+    // 割り当て候補が1件も無い未一致行は、使えないドロップダウンではなく1行の短い
     // 注記だけにする（送り忘れバナーへ誘導）。手動割当済みの行は従来どおりセレクトを出す。
     if (!r.matched || r.manualMatch) {
       if (assignCandidatesFor(r).length === 0 && !r.manualMatch) {
@@ -452,7 +452,7 @@ function evidenceGroupCount(num) {
 // the user is typing, to avoid resetting the caret.
 function renderEvidenceInfo(rf) {
   $("rf-evnum-input").value = rf.evidenceNumber || "";
-  $("rf-branch-input").value = rf.branchRange || ""; // FB-20②
+  $("rf-branch-input").value = rf.branchRange || "";
   renderEvidenceDerived(rf);
 }
 
@@ -499,7 +499,7 @@ function renderUnsupportedWarning(rejected) {
   $("unsupported-warning").classList.add("is-visible");
 }
 
-// UX-41: 添付ファイルの「実際のファイル名」を番号付きで並べた指示文。AIは添付の内部参照名
+// 添付ファイルの「実際のファイル名」を番号付きで並べた指示文。AIは添付の内部参照名
 // （[source: N]）に引っ張られ実ファイル名を書けないことがあるため、これをチャット本文に貼って
 // 直接渡すと確実。番号は添付順の目安（この順に添付すると [source: N] と対応が取れる）。
 function buildFilenameListText() {
@@ -520,7 +520,7 @@ function matchHasIssues() {
 }
 
 // 照合ステップを飛ばして確認へ直行するか。
-// FB-16①②: リネームのみ＋AIデータなしのときは、照合する相手（AIデータ）が無い。
+// リネームのみ＋AIデータなしのときは、照合する相手（AIデータ）が無い。
 // それ以外でも、照合で対応すべきことが何も無ければ照合画面は素通りされるだけなので飛ばす
 // （上の段の「照合」から戻って中身を見ることはできる）。
 function skipMatchStep() {
@@ -540,7 +540,7 @@ async function proceedToMatch() {
   buildReviewFiles();
   enterMatchOrReview();
 }
-// ---------- FB-13: 事務所の書き方メモ（firm-notes） ----------
+// ---------- 事務所の書き方メモ（firm-notes） ----------
 // userData/firm-notes.txt に保存し、「AI用プロンプトをコピー」時にmain側で末尾へ連結する。
 // 本体プロンプトはアプリ更新で保守されるので、事務所の工夫はここに書けば更新で消えない。
 function closeFirmNotesModal() {

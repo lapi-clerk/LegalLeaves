@@ -12,7 +12,7 @@ import shutil
 
 PACKAGE_DIR_NAME = "legal-leaves"      # Electron 版の userData と同じ名前
 LEGACY_DIR_NAME = "rakuraku-mints"     # 旧名（楽々mints）時代の保存先
-MAX_FIRM_NOTES_BYTES = 200 * 1024       # SEC-C7
+MAX_FIRM_NOTES_BYTES = 200 * 1024
 DEFAULT_RECENT_FOLDERS = []
 
 
@@ -202,7 +202,7 @@ def delete_item(key):
 
 
 def purge_cases_dir():
-    """FB-1 凍結: 案件ファイル（作業の保存）は使わない。過去の版が保存した分も起動時に消す。"""
+    """停止中: 案件ファイル（作業の保存）は使わない。過去の版が保存した分も起動時に消す。"""
     shutil.rmtree(cases_dir(), ignore_errors=True)
 
 

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<!-- UX-25: UIフォントを同梱しGoogle Fontsへの外部参照を廃止（外部通信ゼロ・オフラインでも同一表示） -->
+<!-- UIフォントを同梱しGoogle Fontsへの外部参照を廃止（外部通信ゼロ・オフラインでも同一表示） -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
 <title>LegalLeaves</title>
 <link rel="stylesheet" href="./styles.css">
@@ -66,8 +66,8 @@
           <div class="panel-heading">
             <h2>提出ファイル</h2>
             <div class="heading-right">
-              <!-- FB-1凍結（2026-07-15）: 案件ファイル（作業の保存・再開）は、作業データが無意識に
-                   PCへ残ることが事務所ポリシー上望ましくないため無効化。コードは将来の再開用に保持 -->
+              <!-- 案件ファイル（作業の保存・再開）は、作業データが知らないうちに
+                   パソコンへ残らないよう無効にしている。コードは将来の再開用に保持 -->
               <button class="clear-files-btn" id="open-case-btn" type="button" hidden title="前回出力時にアプリ内へ自動保存された案件ファイルを開いて、番号の挿入・修正・再出力ができます">前回の作業を開く</button>
               <button class="clear-files-btn" id="clear-files-btn" type="button" hidden>すべてクリア</button>
               <span class="pill pill-accent" id="file-count-pill">0件</span>
@@ -87,7 +87,7 @@
             <button class="warn-dismiss" id="unsupported-warning-close" type="button" aria-label="閉じる">×</button>
           </div>
 
-          <!-- UX-42: mintsはA4/A3のみ。A3を超えるPDF（大きな図面等）は出力時にA3へ縮小するが、
+          <!-- mintsはA4/A3のみ。A3を超えるPDF（大きな図面等）は出力時にA3へ縮小するが、
                縮小で読み取りに支障が出る場合の選択肢（紙提出・記録外）を読み込み時に案内する。 -->
           <div class="warn-banner inline oversize-warn" id="oversize-warning">
             <span class="pill pill-warn-solid pill-nowrap">A3超</span>
@@ -103,7 +103,7 @@
             <button class="prompt-copy-btn" id="copy-prompt-btn" type="button">AI用プロンプトをコピー</button>
             <span class="prompt-copy-hint">①コピー → ②AIに貼り付けてファイル添付（多いときは分けて送り最後に「完成」）→ ③最終JSONを下の欄へ</span>
           </div>
-          <!-- UX-41: 実ファイル名の一覧をコピー。AIは添付の内部参照名（[source: N]）に引っ張られ、
+          <!-- 実ファイル名の一覧をコピー。AIは添付の内部参照名（[source: N]）に引っ張られ、
                実ファイル名を書けず勝手に甲へ振り直すことがある。実名リストをテキストで直接渡すと確実。
                プロンプトをGem等に登録済みで毎回コピーしない運用でも、これだけ貼ればよい。 -->
           <div class="prompt-copy" id="copy-names-row" hidden>
@@ -114,9 +114,9 @@
             <button class="ghost-button firm-notes-btn" id="firm-notes-btn" type="button">事務所の書き方メモを編集</button>
             <span class="firm-notes-hint" id="firm-notes-hint">立証趣旨などの事務所独自の工夫をプロンプト末尾に自動で足します</span>
           </div>
-          <!-- SEC-C2/C12: 外部AIへの送信・事務所メモの同梱・クリップボード履歴に関する常設注意 -->
+          <!-- 外部AIへの送信・事務所メモの同梱・クリップボード履歴に関する常設注意 -->
           <p class="ai-caution">※ 添付するファイルは外部のAIサービス（Gemini・ChatGPT等）に送信されます。事務所で認められたサービス・アカウントを利用し、学習利用や保存期間の設定をご確認ください。コピーするプロンプトには「事務所の書き方メモ」の内容も含まれます。</p>
-          <!-- UX-3: 正常受領時は生JSONを畳み、受領カードで「受け取れた」ことを明確にする -->
+          <!-- 正常受領時は生JSONを畳み、受領カードで「受け取れた」ことを明確にする -->
           <div class="ai-receipt" id="ai-receipt" hidden>
             <div class="ai-receipt-head">✓ 整理データを受け取りました</div>
             <div class="ai-receipt-sub" id="ai-receipt-sub"></div>
@@ -125,11 +125,11 @@
               <button class="conflict-btn" id="ai-receipt-clear" type="button">貼り直す</button>
             </div>
           </div>
-          <!-- UX-38: 縦に短いウィンドウでも押せるよう、貼り付けボタンはテキスト欄の上に置く
+          <!-- 縦に短いウィンドウでも押せるよう、貼り付けボタンはテキスト欄の上に置く
                （大きなテキスト欄の下だと縮小時に画面外へ隠れてしまう） -->
           <button class="paste-button" id="paste-btn" type="button">クリップボードから貼り付け</button>
           <textarea id="ai-textarea" class="ai-textarea" spellcheck="false" placeholder="AIが出力した整理データ(JSON)を貼り付けてください"></textarea>
-          <!-- UX-15: JSONエラーは他の警告と同じバナー方式（赤文字だけでは見逃す） -->
+          <!-- JSONエラーは他の警告と同じバナー方式（赤文字だけでは見逃す） -->
           <div class="ai-error-banner" id="ai-json-error" role="alert" hidden>
             <span class="pill pill-warn-solid pill-nowrap">エラー</span>
             <span class="ai-error-text" id="ai-json-error-text"></span>
@@ -149,7 +149,7 @@
     <!-- STEP 2: 照合 -->
     <section class="screen" data-screen="match">
       <div class="top-nav-row">
-        <!-- FB-16③: 下部の「戻る」と同じ操作を上部にも（スクロール不要で戻れるように） -->
+        <!-- 下部の「戻る」と同じ操作を上部にも（スクロール不要で戻れるように） -->
         <button class="ghost-button" id="match-back-top-btn" type="button">戻る</button>
         <button class="primary-button small-primary" id="match-next-top-btn" type="button">確認へ進む</button>
       </div>
@@ -220,7 +220,7 @@
           <button class="conflict-btn" id="bulk-stamp-done" type="button">すべて既に押印済み</button>
         </div>
       </div>
-      <!-- UX-31: 作成者の表記（役割名／実名）を、同じ立場の証拠すべてに一括適用する -->
+      <!-- 作成者の表記（役割名／実名）を、同じ立場の証拠すべてに一括適用する -->
       <div class="bulk-bar" id="bulk-author-bar" hidden>
         <span class="bulk-text" id="bulk-author-text"></span>
         <div class="bulk-actions">
@@ -228,14 +228,14 @@
           <button class="conflict-btn" id="bulk-author-name" type="button">すべて実名（会社名・個人名）</button>
         </div>
       </div>
-      <!-- UX-37: 同じ内容の確認（チェック式）が複数あるとき、まとめて確認済みにできる -->
+      <!-- 同じ内容の確認（チェック式）が複数あるとき、まとめて確認済みにできる -->
       <div class="bulk-bar" id="bulk-confirm-bar" hidden>
         <span class="bulk-text" id="bulk-confirm-text"></span>
         <div class="bulk-actions">
           <button class="conflict-btn" id="bulk-confirm-all" type="button">まとめて確認済みにする</button>
         </div>
       </div>
-      <!-- UX-34: ラベル＋操作ボタンを1行目にまとめ、チップ一覧は下段の別行にする（多ファイル時に
+      <!-- ラベル＋操作ボタンを1行目にまとめ、チップ一覧は下段の別行にする（多ファイル時に
            ボタンがチップの折り返し後へ孤立するのを防ぐ） -->
       <div class="review-toolbar">
         <div class="review-toolbar-head">
@@ -244,13 +244,13 @@
             <span class="toggle-all-icon" id="toggle-all-icon">+</span>
             <span id="toggle-all-label">全件を表示</span>
           </button>
-          <!-- UX-17: 全手動修正の一括取り消し（AIの整理データどおりに戻す） -->
+          <!-- 全手動修正の一括取り消し（AIの整理データどおりに戻す） -->
           <button class="toggle-all-button reset-all-button" id="review-reset-all-btn" type="button" title="確認画面での手動修正（証拠番号・文書名・種類・押印の選択など）をすべて取り消して、AIの整理データどおりに戻します">編集をすべて取り消す</button>
         </div>
-        <!-- FB-21②: 号証番号順の一覧。クリックでカード切替、ドラッグで並べ替え（番号は自動で振り直し）。 -->
+        <!-- 号証番号順の一覧。クリックでカード切替、ドラッグで並べ替え（番号は自動で振り直し）。 -->
         <p class="ev-list-hint">行をドラッグすると順番を入れ替えられます（証拠番号は自動で振り直されます）。<strong>別の証拠の上に重ねると、その証拠の枝番になります。</strong>枝番は同じ号証の中で並べ替えできます。<strong>枝番を号証の行の上下に出すと、枝番を解除できます。</strong></p>
         <div class="evidence-list" id="review-list"></div>
-        <!-- FB-21②Phase2: 選択中の証拠の前／後に空き枠を割り込ませる。「これを甲3にして、前の甲3を
+        <!-- 選択中の証拠の前／後に空き枠を割り込ませる。「これを甲3にして、前の甲3を
              甲4に」のような割り込みを1クリックで（一覧で対象を選んでから押す）。空き枠は証拠説明書の
              生成時に空行（●●）として出力される。ファイルにその番号を割り当てると枠は消える。 -->
         <div class="insert-bar" id="insert-bar" hidden>
@@ -322,7 +322,7 @@
           <span class="resolve-hint" id="rf-stamp-hint">どちらかを選ぶと確認済みになります</span>
         </div>
 
-        <!-- FB-15: 確認事項をPDFを別途開かずに判断できるよう、元ファイルをその場で表示
+        <!-- 確認事項をPDFを別途開かずに判断できるよう、元ファイルをその場で表示
              （PDFは同梱PDF.jsで直接描画＝内蔵ビュワーのサムネイル欄・ツールバーを出さない） -->
         <div class="source-preview" id="rf-source-preview" hidden>
           <!-- v5.2.1: 向きを直すボタンはプレビューのすぐ上に（プルダウンから変更） -->
@@ -347,12 +347,12 @@
                   <option>主張系</option><option>証拠説明書</option><option>証拠</option><option>関連事件の申立</option><option>その他</option>
                 </select>
               </label>
-              <!-- UX-17: AIの値と異なるときだけ差分ヒント＋1クリック復元 -->
+              <!-- AIの値と異なるときだけ差分ヒント＋1クリック復元 -->
               <div class="ai-orig-hint" id="rf-kind-orig" hidden>
                 <span class="ai-orig-value"></span>
                 <button class="ai-orig-restore" type="button" data-restore="kind">AIの値に戻す</button>
               </div>
-              <!-- FB-16④: 証拠のときは「証拠説明書の標目」、それ以外は「文書名」に出し分け（app.js） -->
+              <!-- 証拠のときは「証拠説明書の標目」、それ以外は「文書名」に出し分け（app.js） -->
               <label class="field">
                 <span class="field-label-row"><span id="rf-docname-label">文書名</span><span class="tag-warn" id="rf-docname-tag" hidden>要確認</span></span>
                 <input id="rf-docname" class="text-input" />
@@ -403,13 +403,13 @@
             <span class="ai-orig-value"></span>
             <button class="ai-orig-restore" type="button" data-restore="evidenceNumber">AIの値に戻す</button>
           </div>
-          <!-- FB-20②: 枝番の編集欄。後から枝番の途中に証拠を挿入する等の手直しに使う
-               （結合PDFのページ順は枝番の昇順に自動整列される＝FB-20①） -->
+          <!-- 枝番の編集欄。後から枝番の途中に証拠を挿入する等の手直しに使う
+               （結合PDFのページ順は枝番の昇順に自動整列される） -->
           <label class="field evnum-field" id="rf-branch-field" hidden>
             <span class="field-label">枝番（あれば。例: 1）</span>
             <input id="rf-branch-input" class="text-input" placeholder="（枝番なし）" spellcheck="false" />
           </label>
-          <!-- UX-16②: 「提出物から完全に除外」は重い操作なので danger-button で赤系に。
+          <!-- 「提出物から完全に除外」は重い操作なので danger-button で赤系に。
                （「証拠番号だけ外す」は証拠番号欄を空にするのと同じで使われないため撤去した） -->
           <div class="exclude-row" id="rf-exclude-row" hidden>
             <button class="conflict-btn danger-button" id="rf-remove-file-btn" type="button" title="このファイルを読み込み一覧・提出物から完全に除外します（「編集をすべて取り消す」で戻せます）">このファイルを提出物から除外する</button>
@@ -468,7 +468,7 @@
           <div class="folder-info">
             <div class="folder-info-label">選択中の保存先</div>
             <div class="folder-info-path" id="output-folder-path"></div>
-            <!-- UX-22: サブフォルダ作成時は選択したフォルダと実際の出力先が異なるため明示する -->
+            <!-- サブフォルダ作成時は選択したフォルダと実際の出力先が異なるため明示する -->
             <div class="folder-final-path" id="output-final-path" hidden></div>
           </div>
           <button class="primary-button" id="choose-folder-btn" type="button">フォルダを選ぶ</button>
@@ -487,7 +487,7 @@
           </span>
         </label>
 
-        <!-- FB-16⑤: リネームのみモードではプレビュー対象が無いため行ごと非表示（app.js） -->
+        <!-- リネームのみモードではプレビュー対象が無いため行ごと非表示（app.js） -->
         <label class="subfolder-toggle" id="preview-toggle-row">
           <input type="checkbox" id="preview-toggle-checkbox" checked />
           <span class="subfolder-text">
@@ -505,11 +505,11 @@
         </label>
         <p class="mode-note" id="expl-existing-note" hidden>証拠説明書は読み込んだ既存のものを使用します（照合のみ・生成しません）。</p>
 
-        <!-- UX-18: 未入力（●●）残数を出力前に表示。閲覧専用プレビューは廃止し、未入力が
+        <!-- 未入力（●●）残数を出力前に表示。閲覧専用プレビューは廃止し、未入力が
              残っていればPDF化は省略（Wordで埋めてから作り直す運用）。 -->
         <p class="mode-note expl-blank-note" id="expl-blank-note" hidden></p>
 
-        <!-- UX-21: 「作成」を押すと何が行われるかの事前サマリ -->
+        <!-- 「作成」を押すと何が行われるかの事前サマリ -->
         <div class="export-summary" id="export-summary"></div>
       </section>
 
@@ -553,7 +553,7 @@
         <div class="preview-errors" id="preview-errors" hidden></div>
       </div>
       <div class="preview-stage">
-        <!-- FB-11: PDF.js描画＋スタンプオーバーレイ（焼き込みは承認時のみ）。 -->
+        <!-- PDF.js描画＋スタンプオーバーレイ（焼き込みは承認時のみ）。 -->
         <div class="pv-scroll" id="pv-scroll"></div>
       </div>
     </div>
@@ -590,7 +590,7 @@
 </div>
 
 
-<!-- FB-13: 事務所の書き方メモ（userData/firm-notes.txt。プロンプトコピー時に末尾へ連結） -->
+<!-- 事務所の書き方メモ（userData/firm-notes.txt。プロンプトコピー時に末尾へ連結） -->
 <div class="modal-overlay" id="firm-notes-overlay" hidden>
   <div class="modal-box firm-notes-box" role="dialog" aria-modal="true" aria-labelledby="firm-notes-title">
     <div class="modal-head">
@@ -601,7 +601,7 @@
       <p class="firm-notes-desc">立証趣旨の書き方など、事務所独自の工夫を自由に書いてください。
         「AI用プロンプトをコピー」のたびにプロンプトの末尾へ自動で連結されます（空欄なら何も足しません）。
         この内容はこのパソコンにだけ保存され、アプリを更新しても消えません。</p>
-      <!-- UX-13: 保存先の見える化（どこに保存されるか分からない不安への対応） -->
+      <!-- 保存先の見える化（どこに保存されるか分からない不安への対応） -->
       <p class="firm-notes-path"><span id="firm-notes-path"></span>
         <button class="ai-orig-restore" id="firm-notes-open-dir" type="button">保存先フォルダを開く</button></p>
       <textarea id="firm-notes-textarea" class="ai-textarea firm-notes-textarea" spellcheck="false"
@@ -624,10 +624,10 @@
     <div class="modal-body">
       <p>「LegalLeaves」は、裁判所への提出ファイルづくり（リネーム・メタデータ削除・証拠番号スタンプ・結合・証拠説明書の下書き）を次の5ステップで行うツールです。</p>
 
-      <!-- UX-13/14・FB-18①: データの保存場所と削除。アンインストール時等に真っ先に必要な情報
+      <!-- データの保存場所と削除。アンインストール時等に真っ先に必要な情報
            なので、5ステップ解説の後ろではなくヘルプ冒頭に置く -->
       <h3>データの保存場所と削除（アプリをやめるとき）</h3>
-      <!-- FB-18①追加指摘: 保存される/されないを別段落に分けて視覚的に区別する -->
+      <!-- 保存される/されないを別段落に分けて視覚的に区別する -->
       <p><strong>保存されるもの</strong>（このパソコンにだけ。クラウドには送信しません）:
         事務所の書き方メモ／最近使ったフォルダの履歴／画面設定。</p>
       <p><strong>保存されないもの</strong>: 読み込んだファイルやAIの整理データ（作業内容そのもの）は
@@ -709,7 +709,7 @@
 </div>
 
 <script type="module" src="./vendor/pdfjs/loader.mjs"></script>
-<!-- 監査⑥: app.js の分割。定義を先に読み、イベント配線・初期化を持つ app.js を最後に読む。 -->
+<!-- app.js の分割。定義を先に読み、イベント配線・初期化を持つ app.js を最後に読む。 -->
 <!-- 帯・スタンプ位置の定数（唯一の定義場所）。他より先に読む -->
 <script src="./timestamp-zone.js"></script>
 <script src="./app-state.js"></script>

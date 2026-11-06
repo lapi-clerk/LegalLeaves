@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // 証拠番号まわり（記号・枝番の解析／全角半角／証拠説明書との整合／照合と出力プランの組み立て）
 //
-// src/app.js から分離（監査⑥）。関数の中身は移動しただけで変更していない。
+// src/app.js から分離。関数の中身は移動しただけで変更していない。
 // 号証記号の実務ルール（片側のみ・刑事の弁検は枝番なし 等）は各関数のコメントを参照。
 // ---------------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ function normKeyNoExt(name) {
 }
 
 // A default top-right stamp, used when a numbered evidence has no stamp yet.
-// y=0.07 はタイムスタンプ帯（上端8〜19mm）の直下（FB-6。TIMESTAMP_ZONE 参照）。
+// y=0.07 はタイムスタンプ帯（上端8〜19mm）の直下（TIMESTAMP_ZONE 参照）。
 function defaultStamp() {
   return { page: 1, branch: null, draw_label: true, rotate_degrees: 0, position: { x: 0.93, y: STAMP_SAFE_Y, anchor: "top-right" } };
 }
@@ -109,7 +109,7 @@ function titleFromFilename(name) {
 }
 // 証拠説明書など裁判文書コンテンツの慣行: 英数字・スペース・括弧は全角（日付だけ半角）。
 // 氏名の姓名の間の全角スペース自体は、単語境界をアプリが推測できないためAI/プロンプト側の
-// 責務（assets/ai-prompt.txt）。ここでは半角で来た値の「幅」だけを矯正する。
+// 責務（assets/ai-prompt.md）。ここでは半角で来た値の「幅」だけを矯正する。
 function toFullWidth(s) {
   return String(s || "")
     .replace(/[0-9A-Za-z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xfee0))
@@ -121,7 +121,7 @@ function toHalfWidth(s) {
   return String(s || "").replace(/[０-９Ａ-Ｚａ-ｚ．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 }
 // ファイル名の慣行: 表示幅を抑えるため、英数字・括弧は半角（AIが全角で書いてくることがあるため矯正）。
-// ＿（全角アンダーバー U+FF3F）も同じ -0xFEE0 規則で _ になる（UX-17-2: 取りこぼしていた）。
+// ＿（全角アンダーバー U+FF3F）も同じ -0xFEE0 規則で _ になる（取りこぼしていた）。
 function toHalfWidthFilenamePart(s) {
   return String(s || "")
     .replace(/[０-９Ａ-Ｚａ-ｚ＿]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
@@ -130,8 +130,8 @@ function toHalfWidthFilenamePart(s) {
     .replace(/　/g, " ");
 }
 // 号証 label for the 証拠説明書 table: 公式ひな形（フェーズ3・shouko_setsumeisho_f3.xlsx）準拠。
-// 英数字は半角・3桁ゼロ埋め・枝番は半角ハイフン。裁判文書コンテンツ＝全角の一般則（FB-1x）の
-// 例外で、号証欄だけは公式が「英数字は半角」と明示している（FB-14で確定）。
+// 英数字は半角・3桁ゼロ埋め・枝番は半角ハイフン。裁判文書コンテンツ＝全角の一般則の
+// 例外で、号証欄だけは公式が「英数字は半角」と明示している。
 // e.g. ("乙041","1") -> "乙041-1"  ("甲005",null) -> "甲005"
 function explanationEvidenceLabel(evidenceNumber, branch) {
   const p = parseEvidenceNumber(evidenceNumber);
@@ -232,7 +232,7 @@ function setStampBranch(rf, branch) {
 
 // v3 pattern A: cross-check the 証拠説明書's declared number range against the evidence
 // files actually present. Returns null when there is no 証拠説明書 to check against.
-// 監査①: 号証番号の範囲を1つずつ回す突き合わせの上限（実務の最大想定より十分大きい値）。
+// 号証番号の範囲を1つずつ回す突き合わせの上限（実務の最大想定より十分大きい値）。
 const MAX_EVIDENCE_RANGE_SCAN = 2000;
 // 警告文に番号を並べるときの表示上限（長大な一覧で画面が重くならないように）。
 function listForMessage(items, max = 50) {
@@ -255,7 +255,7 @@ function computeConsistency(reviewFiles, ee) {
   let range = null;
   if (first && last && first.sym === last.sym && first.num <= last.num) {
     range = `${ee.first_evidence_number}〜${ee.last_evidence_number}`;
-    // 監査①: 番号の幅ぶんだけ回すループなので、AIが「甲1〜甲999999999」のような
+    // 番号の幅ぶんだけ回すループなので、AIが「甲1〜甲999999999」のような
     // 異常な範囲を出すと画面が固まる。実務の最大想定より十分大きい上限で打ち切る。
     if (last.num - first.num + 1 > MAX_EVIDENCE_RANGE_SCAN) {
       issues.push(`証拠説明書の番号範囲（${range}）が広すぎるため、不足・範囲外の突き合わせはスキップしました。番号の記載をご確認ください。`);
@@ -316,7 +316,7 @@ function buildReviewFiles() {
   let caseInfo = null;
   try {
     const parsed = JSON.parse(state.aiText);
-    // 監査①: validateAiJson で弾いているが、案件ファイル復元など別経路もあるので
+    // validateAiJson で弾いているが、案件ファイル復元など別経路もあるので
     // ここでも「オブジェクトである要素」だけを使う（files:[null] で落ちないように）。
     aiFiles = Array.isArray(parsed.files)
       ? parsed.files.filter((f) => f && typeof f === "object" && !Array.isArray(f))
@@ -337,9 +337,9 @@ function buildReviewFiles() {
 
   const reviewFiles = state.files.map((f) => {
     const metadata = (f.metaFields || []).map((m) => ({ key: m.key, val: m.value, action: "delete" }));
-    const officeMeta = f.officeMeta || null; // FB-19: Word文書の個人情報削除フラグ検査結果
-    const activeContent = f.activeContent || null; // SEC-C13: PDFの能動的コンテンツ（検出のみ・削除はしない）
-    const overA3 = f.overA3 || null; // UX-42: A3を超えるページの寸法（出力時はA3へ縮小）
+    const officeMeta = f.officeMeta || null; // Word文書の個人情報削除フラグ検査結果
+    const activeContent = f.activeContent || null; // PDFの能動的コンテンツ（検出のみ・削除はしない）
+    const overA3 = f.overA3 || null; // A3を超えるページの寸法（出力時はA3へ縮小）
     // user-forced link first, then exact filename, normalized (space / full-half-
     // width), then ignoring the extension (AI may write .jpg for a .png).
     const forcedName = state.manualMatches[f.path];
@@ -398,7 +398,7 @@ function buildReviewFiles() {
         createdDate: entry.created_date || "",
         proofPurpose: entry.proof_purpose || "",
         originalOrCopy: entry.original_or_copy || "",
-        // FB-14: 紙をスキャンして電磁的記録として出すものは備考欄に「紙を電子化」と書く（公式ひな形の運用）
+        // 紙をスキャンして電磁的記録として出すものは備考欄に「紙を電子化」と書く（公式ひな形の運用）
         digitizedFromPaper: entry.digitized_from_paper === true,
         captureKind: entry.capture_kind || "", // 写真 / スクリーンショット / ""
         captureSubject: entry.capture_subject || "",
@@ -407,7 +407,7 @@ function buildReviewFiles() {
         captureBy: entry.capture_by || "",
       };
     }
-    // FB-16: リネームのみモードでAIデータが無いのは正常な使い方（メタデータ削除のみ）
+    // リネームのみモードでAIデータが無いのは正常な使い方（メタデータ削除のみ）
     // なので、要確認扱いにしない。「AIを使わずに進む」も同じ（要確認は下でファイル名を見て決める）。
     const noAi = noAiData();
     return {
@@ -469,7 +469,7 @@ function buildReviewFiles() {
     }
   }
 
-  // UX-42b: A3を超える証拠は出力時にA3へ縮小される＝図面などは読み取りに支障が出うる。
+  // A3を超える証拠は出力時にA3へ縮小される＝図面などは読み取りに支障が出うる。
   // 読み込み画面のバナーだけでは見落として素通りしてしまう（実機report）ため、確認画面でも
   // 「要確認」にして、チェックを入れるまで出力へ進めないようにする（既存の確認の仕組みに乗せる）。
   // リネームのみモードは、すでに完成したファイルを扱う運用なので対象外。
@@ -495,7 +495,7 @@ ${rf.confirmText}` : note;
     if (rf.kind === "証拠説明書") rf.suggested = `${expBase}${submitExtFor(rf.name)}`;
   }
 
-  // UX-17: AI（照合直後）の値のスナップショット。手動編集で上書きされても
+  // AI（照合直後）の値のスナップショット。手動編集で上書きされても
   // フィールド単位で「AIの値に戻す」ができるよう、以後不変で保持する。
   for (const rf of reviewFiles) {
     if (rf.matched) {
@@ -509,7 +509,7 @@ ${rf.confirmText}` : note;
   }
 
   state.aiEntries = aiFiles;
-  // Orphans = submittable AI entries with no matching file. UX-6-1/UX-6-2: the banner
+  // Orphans = submittable AI entries with no matching file. the banner
   // for these is now built case-by-case in renderMatch (読み込み忘れ / 送信忘れ / 手動割当)
   // rather than as a flat per-orphan warning here.
   state.orphanEntries = aiFiles.filter(
@@ -534,7 +534,7 @@ ${rf.confirmText}` : note;
 
   const firstConfirm = reviewFiles.findIndex((rf) => rf.needsConfirmation);
   state.selectedReview = firstConfirm >= 0 ? firstConfirm : 0;
-  // UX-29①: 要確認があるときは既定で「要確認のみ表示」（絞り込み）。全件確認済みなら
+  // 要確認があるときは既定で「要確認のみ表示」（絞り込み）。全件確認済みなら
   // 絞ると空になるので全件表示のまま。ただし一覧が左の欄に並ぶ広い画面（styles.css の 1180px 以上）では、
   // 一覧が内容を押し下げないので最初から全件を表示する（並べ替え・挿入にすぐ使えるように）。
   const wide = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(min-width: 1180px)").matches;
@@ -767,7 +767,7 @@ function shortNumberLabel(num) {
   return p ? `${p.sym}${p.num}` : String(num || "");
 }
 
-// FB-20①: 同一号証の結合グループ。読み込み順ではなく枝番の昇順で並べる
+// 同一号証の結合グループ。読み込み順ではなく枝番の昇順で並べる
 // （後から途中の枝番のファイルを追加しても、結合PDFのページ順が正しくなる。
 // 枝番なし同士はsortの安定性で読み込み順を維持＝従来挙動と同じ）。
 function mergeGroupFor(num) {

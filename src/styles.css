@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-/* UX-25: UIフォントをローカル同梱（Google Fontsへの外部参照を廃止。
+/* UIフォントをローカル同梱（Google Fontsへの外部参照を廃止。
    オフラインでも同一表示・外部通信ゼロ。NotoSansJPは可変フォント=全ウェイト内包） */
 @font-face {
   font-family: 'Noto Sans JP';
@@ -21,7 +21,7 @@
   font-weight: 600;
   font-display: swap;
 }
-/* FB-11: スタンプオーバーレイの字形を焼き込み（pdf-engine）と同じフォントにする */
+/* スタンプオーバーレイの字形を焼き込み（pdf-engine）と同じフォントにする */
 @font-face {
   font-family: "MintsStamp";
   src: url("../assets/fonts/NotoSansJP-stamp.ttf") format("truetype");
@@ -42,10 +42,10 @@ textarea:focus, input:focus, select:focus {
 ::-webkit-scrollbar { height: 8px; width: 8px; }
 ::-webkit-scrollbar-thumb { background: #cfd6df; border-radius: 999px; }
 
-/* UX-24: キーボード操作時のフォーカスを明確に（マウス時は出さない） */
+/* キーボード操作時のフォーカスを明確に（マウス時は出さない） */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* UX-24: OSの「アニメーションを減らす」設定に対応 */
+/* OSの「アニメーションを減らす」設定に対応 */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
@@ -503,7 +503,7 @@ html, body { height: 100%; }
 .shift-bar .shift-text { color: var(--muted); }
 .shift-bar .shift-input { width: 130px; flex: none; min-height: 32px; padding: 0 10px; font-size: 13px; }
 .shift-note { font-size: 13px; font-weight: 700; color: var(--accent-fg); }
-/* UX-16④: 「詰める」は自動確認が基本・このバーは手動微調整用、の補足 */
+/* 「詰める」は自動確認が基本・このバーは手動微調整用、の補足 */
 .shift-hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
 
 .review-progress { font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
@@ -634,7 +634,7 @@ html, body { height: 100%; }
 }
 .field-error { margin: 8px 2px 0; color: var(--danger-fg); font-size: 12.5px; font-weight: 600; }
 
-/* UX-3: AI整理データの受領カード（正常受領時は生JSONを畳む） */
+/* AI整理データの受領カード（正常受領時は生JSONを畳む） */
 .ai-receipt {
   border: 1px solid var(--ok-fg);
   background: var(--ok-bg);
@@ -648,7 +648,7 @@ html, body { height: 100%; }
 .ai-receipt-sub { font-size: 13px; color: var(--text); }
 .ai-receipt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* UX-15: JSONエラーのバナー化（他の警告表示と同じ視覚的重み） */
+/* JSONエラーのバナー化（他の警告表示と同じ視覚的重み） */
 .ai-error-banner {
   display: flex;
   align-items: center;
@@ -695,10 +695,10 @@ html, body { height: 100%; }
 .prompt-copy-btn:hover { border-color: var(--accent); }
 .prompt-copy-btn.is-done { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-fg); }
 .prompt-copy-hint { color: var(--muted); font-size: 13px; }
-/* UX-22: 実際の保存先（サブフォルダ込み）の明示 */
+/* 実際の保存先（サブフォルダ込み）の明示 */
 .folder-final-path { margin-top: 4px; font-size: 13px; color: var(--accent-fg); font-weight: 600; word-break: break-all; }
 
-/* UX-21: 出力前の処理サマリ */
+/* 出力前の処理サマリ */
 .export-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .export-summary:empty { display: none; }
 .export-summary-item {
@@ -710,10 +710,10 @@ html, body { height: 100%; }
   color: var(--text);
 }
 
-/* UX-18: 証拠説明書の未入力（●●）残数の注記（閲覧専用プレビューは廃止） */
+/* 証拠説明書の未入力（●●）残数の注記（閲覧専用プレビューは廃止） */
 .expl-blank-note { color: var(--warn-fg); font-weight: 600; }
 
-/* UX-17: AIの値との差分ヒント＋1クリック復元 */
+/* AIの値との差分ヒント＋1クリック復元 */
 .ai-orig-hint {
   display: flex;
   align-items: center;
@@ -738,21 +738,21 @@ html, body { height: 100%; }
 }
 .ai-orig-restore:hover { border-color: var(--accent-line); background: var(--accent-soft); }
 
-/* UX-16: この証拠を外す導線 */
+/* この証拠を外す導線 */
 .exclude-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
 
-/* UX-17-4: 証拠説明書用フィールド（この画面に入力欄が無い）に関する確認の補足 */
+/* 証拠説明書用フィールド（この画面に入力欄が無い）に関する確認の補足 */
 .expl-field-note { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 
-/* UX-6: クリックで該当行へ誘導できる警告と、誘導先のハイライト */
+/* クリックで該当行へ誘導できる警告と、誘導先のハイライト */
 .warn-banner.is-clickable { cursor: pointer; }
 .warn-banner.is-clickable:hover { filter: brightness(0.97); }
 .table-row.is-highlighted { outline: 2px solid var(--warn-fg); outline-offset: -2px; transition: outline-color .3s; }
 
-/* SEC-C2/C12: 外部AI利用の常設注意 */
+/* 外部AI利用の常設注意 */
 .ai-caution { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color: #b34310; }
 
-/* UX-13/14: データの保存場所と削除 */
+/* データの保存場所と削除 */
 .help-data-path { font-size: 13px; font-weight: 600; word-break: break-all; }
 .help-data-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .help-data-actions .ghost-button { min-height: 34px; font-size: 13px; }
@@ -760,7 +760,7 @@ html, body { height: 100%; }
 .danger-button:hover { background: var(--danger-bg) !important; }
 .firm-notes-path { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; font-size: 12.5px; color: var(--muted); word-break: break-all; }
 
-/* FB-13: 事務所の書き方メモ */
+/* 事務所の書き方メモ */
 .firm-notes-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 10px; }
 .firm-notes-btn { font-size: 12.5px; padding: 7px 12px; }
 .firm-notes-hint { color: var(--muted); font-size: 13px; }
@@ -844,10 +844,10 @@ html, body { height: 100%; }
 .warn-banner.inline { gap: 11px; margin-bottom: 0; margin-top: 16px; padding: 12px 14px; display: none; }
 .warn-banner.inline.is-visible { display: flex; }
 /* 各画面上部の遷移ボタン行（下部の「次へ」がスクロールしないと見えない対策） */
-/* UX-29③: 「戻る」は最左・「進む」は最右に固定（読み込み画面はhint-textのmargin-right:autoが優先） */
+/* 「戻る」は最左・「進む」は最右に固定（読み込み画面はhint-textのmargin-right:autoが優先） */
 .top-nav-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
 
-/* FB-15: 確認画面の元ファイルプレビュー */
+/* 確認画面の元ファイルプレビュー */
 .source-preview-btn { font-size: 13px; padding: 8px 14px; white-space: nowrap; }
 .source-preview {
   margin-top: 14px;
@@ -861,7 +861,7 @@ html, body { height: 100%; }
 .source-page-slot { background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .3); width: fit-content; position: relative; }
 .source-page-canvas { display: block; }
 .source-preview img { width: 100%; height: 100%; object-fit: contain; object-position: center top; display: block; background: #f3f4f6; }
-/* FB-21②: 広い画面ではファイル一覧を左サイドバーにして、カードと横並びにする（一覧｜カード）。
+/* 広い画面ではファイル一覧を左サイドバーにして、カードと横並びにする（一覧｜カード）。
    さらにプレビューを開くとカード内が2列に分かれ、結果「一覧｜内容｜プレビュー」の3列になる。
    幅が足りない画面ではこのメディアクエリが効かず、従来どおり縦積み（一覧→カード）のまま。 */
 @media (min-width: 1180px) {
@@ -977,9 +977,9 @@ html, body { height: 100%; }
   padding: 0 14px 12px 104px;
 }
 .assign-label { font-size: 12px; font-weight: 600; color: var(--muted); }
-/* UX-6-2: 割り当て候補が無い未一致行の1行注記（重いドロップダウンの代わり） */
+/* 割り当て候補が無い未一致行の1行注記（重いドロップダウンの代わり） */
 .row-assign-empty { padding: 0 14px 12px 104px; font-size: 12px; color: var(--muted); }
-/* UX-6-1: 読み込み忘れバナー内の「読み込みへ戻る」ボタンを行内に収める */
+/* 読み込み忘れバナー内の「読み込みへ戻る」ボタンを行内に収める */
 .back-to-load-btn { margin-top: 8px; }
 .assign-select {
   min-height: 32px;
@@ -999,7 +999,7 @@ html, body { height: 100%; }
   gap: 10px;
   margin-bottom: var(--gap);
 }
-/* UX-34: 1行目＝ラベル＋操作ボタン（右寄せ）。一覧は下段（FB-21②Phase1） */
+/* 1行目＝ラベル＋操作ボタン（右寄せ）。一覧は下段 */
 .review-toolbar-head {
   display: flex;
   flex-wrap: wrap;
@@ -1010,7 +1010,7 @@ html, body { height: 100%; }
 .review-toolbar-head .toggle-all-button:first-of-type { margin-left: auto; }
 .toolbar-label { font-size: 13px; color: var(--muted); font-weight: 600; }
 
-/* FB-21②Phase3: 一覧のドラッグ操作ヒント */
+/* 一覧のドラッグ操作ヒント */
 .ev-list-hint { margin: 0 0 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 /* 「証拠」なのに番号が空のとき、番号入力を促す注意ヒント（オレンジ系） */
 .evnum-hint {
@@ -1022,7 +1022,7 @@ html, body { height: 100%; }
   background: var(--warn-bg);
   border-radius: 8px;
 }
-/* FB-21②Phase1: 号証番号順のファイル一覧（旧チップ横並びを置き換え） */
+/* 号証番号順のファイル一覧（旧チップ横並びを置き換え） */
 .evidence-list {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1101,7 +1101,7 @@ html, body { height: 100%; }
 /* 要確認だけを表示しているときの「ほか○件は非表示」の案内 */
 .ev-hidden-note { padding: 10px 12px; font-size: 12px; color: var(--muted); line-height: 1.5; border-top: 1px dashed var(--line); }
 
-/* FB-21②Phase2: 「後で追加予定」の空き枠。実ファイルが無いことが分かるよう破線・淡色に */
+/* 「後で追加予定」の空き枠。実ファイルが無いことが分かるよう破線・淡色に */
 .ev-placeholder { background: repeating-linear-gradient(135deg, #fafbfc, #fafbfc 8px, #f2f4f7 8px, #f2f4f7 16px); }
 .ev-ph-row { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px dashed var(--accent-line); }
 .ev-placeholder:first-child .ev-ph-row,
@@ -1153,8 +1153,8 @@ html, body { height: 100%; }
 }
 .toggle-all-button:hover { background: var(--accent-strong); box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); }
 .toggle-all-button:active { transform: translateY(1px); }
-/* UX-29②: 「編集をすべて取り消す」は表示切替と役割が違う（重い操作）ので控えめな配色で区別 */
-/* UX-29②/追加要望: 「編集をすべて取り消す」は危険な操作なので赤背景・白文字で目立たせる */
+/* 「編集をすべて取り消す」は表示切替と役割が違う（重い操作）ので控えめな配色で区別 */
+/* 「編集をすべて取り消す」は危険な操作なので赤背景・白文字で目立たせる */
 .toggle-all-button.reset-all-button { background: var(--danger-fg); color: #fff; border-color: var(--danger-fg); box-shadow: none; font-weight: 700; }
 .toggle-all-button.reset-all-button:hover { background: #8c3a34; box-shadow: none; }
 .toggle-all-icon {
@@ -1254,7 +1254,7 @@ select, .text-input {
   border-bottom: 1px solid var(--line-soft);
 }
 .meta-row:last-child { border-bottom: none; }
-/* FB-19: Word文書の個人情報削除フラグ未設定の警告（PDF情報欄内） */
+/* Word文書の個人情報削除フラグ未設定の警告（PDF情報欄内） */
 .office-meta-warn { border: 1px solid var(--warn-fg); background: var(--warn-bg); border-radius: 10px; padding: 10px 12px; }
 .office-meta-lead { font-size: 13px; font-weight: 700; color: var(--warn-fg); }
 .office-meta-body { margin-top: 4px; font-size: 12px; line-height: 1.55; color: var(--text); }
@@ -1294,7 +1294,7 @@ select, .text-input {
   transition: left .4s cubic-bezier(.34, 1.3, .5, 1), background-color .4s ease;
 }
 .meta-toggle.is-keep .meta-knob { left: 45px; background: var(--ok-fg); }
-/* UX-27②: 押印トグルは「押印なし」（4文字）が入るよう幅を広げる */
+/* 押印トグルは「押印なし」（4文字）が入るよう幅を広げる */
 .stamp-toggle { width: 124px; }
 .stamp-toggle .meta-knob { width: 64px; }
 .stamp-toggle.is-keep .meta-knob { left: 57px; }
@@ -1526,7 +1526,7 @@ select, .text-input {
 .rot-btn:hover { background: #f3f4f6; }
 .rot-btn[hidden] { display: none; }
 .stamp-rot-note { font-size: 12px; color: var(--warn-fg, #b34310); white-space: nowrap; }
-/* FB-6: タイムスタンプ帯との干渉警告（stamp-row のグリッド全幅に展開） */
+/* タイムスタンプ帯との干渉警告（stamp-row のグリッド全幅に展開） */
 .stamp-zone-warn {
   grid-column: 1 / -1;
   display: flex;
@@ -1569,7 +1569,7 @@ select, .text-input {
 .preview-errors { display: grid; gap: 6px; margin-top: 6px; }
 .preview-errors div { border: 1px solid var(--danger-bg); background: var(--danger-bg); color: var(--danger-fg); border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 600; }
 .preview-stage { position: relative; background: #525659; min-height: 0; min-width: 0; }
-/* FB-11: PDF.js描画ステージ＋スタンプオーバーレイ */
+/* PDF.js描画ステージ＋スタンプオーバーレイ */
 .pv-scroll {
   position: absolute; inset: 0; overflow: auto;
   padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 16px;

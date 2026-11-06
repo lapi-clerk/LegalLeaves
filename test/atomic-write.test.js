@@ -1,4 +1,4 @@
-// 出力ファイルが「途中まで書かれた状態」で残らないことのテスト（監査⑤ SEC-A4）。
+// 出力ファイルが「途中まで書かれた状態」で残らないことのテスト。
 // 実行: node test/atomic-write.test.js
 const fs = require("fs");
 const os = require("os");
