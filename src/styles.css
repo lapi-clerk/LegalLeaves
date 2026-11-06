@@ -1519,6 +1519,31 @@ select, .text-input {
   border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
 .rot-bar.in-preview { display: inline-flex; padding: 0; border: none; background: transparent; position: static; }
 .rot-bar[hidden] { display: none; }
+/* v5.3.0: 確認画面のプレビューの上の帯（重ねる切り替え＋向きのボタン）。まとめて上に残す */
+.src-pv-head { position: sticky; top: 0; z-index: 2; }
+.src-pv-head .rot-bar { position: static; }
+.overlay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 7px 10px;
+  background: #fff; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.overlay-bar[hidden] { display: none; }
+.overlay-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+.rot-bar-label { font-size: 12.5px; font-weight: 600; color: var(--text); margin-right: 2px; }
+/* v5.3.2: 出力前プレビューの「表示中のページ」だけ回すボタン。「元に戻す」が出入りしても後ろのボタンが動かないよう、
+   隠すときも場所は取っておく */
+.rot-reset.is-invisible { visibility: hidden; }
+.page-rot-group { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding-left: 12px;
+  border-left: 1px solid var(--line); }
+.page-rot-group[hidden] { display: none; }
+/* 「3ページ目（右に90°回転）」はボタンの組の外に置く（文字の長さで組の幅が変わり、折り返してボタンが動かないように） */
+.page-rot-group[hidden] + .page-rot-now { display: none; }
+.page-rot-now { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.page-rot-now.is-rotated { color: var(--warn-fg, #b34310); font-weight: 700; }
+/* ページで分けた枝番: その証拠に入らないページは薄くする */
+.source-page-slot.is-outside canvas { opacity: .35; }
+.src-outside-note {
+  position: absolute; left: 50%; top: 24px; transform: translateX(-50%);
+  font-size: 12.5px; font-weight: 600; color: #374151; background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; white-space: nowrap;
+}
 .rot-state { font-size: 12.5px; color: var(--muted); margin-right: 4px; }
 .rot-state.is-rotated { color: var(--warn-fg, #b34310); font-weight: 700; }
 .rot-btn { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px;
@@ -1622,4 +1647,6 @@ select, .text-input {
 }
 .preview-hint { color: var(--muted); font-size: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .preview-caution { color: var(--warn-fg); font-weight: 600; }
-.preview-foot-actions { display: flex; gap: 10px; }
+/* 左の注意書きが長くてもボタンを縮めない（5.2.6 で注意書きが長くなり、ボタンが縦長に折り返していた） */
+.preview-foot-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.preview-foot-actions button { white-space: nowrap; }

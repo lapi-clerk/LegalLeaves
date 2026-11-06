@@ -40,6 +40,7 @@ r.explRow = row && { 号証: row.号証, 標目: row.標目, 作成者: row.作�
 // 2) 回転ボタン（写真）: プレビューの上のボタンで右に90°。表示も横長に変わる
 state.selectedReview = iJpg;
 renderReview();
+srcPv.overlayOn = false; // 5.3.0 から写真は番号を重ねた紙面で出る。ここでは元の画像（img）の向きを見る
 if ($("rf-source-preview").hidden) await openSourcePreview(state.reviewFiles[iJpg]);
 await waitFor(() => $("rf-source-img").complete && $("rf-source-img").naturalWidth > 0);
 r.rotBarShown = !$("rf-rot-bar").hidden;
@@ -49,7 +50,7 @@ await sleep(300);
 await waitFor(() => $("rf-source-img").complete && $("rf-source-img").naturalWidth > 0 && $("rf-source-img").naturalWidth !== before.w);
 r.rotate = { before, after: { w: $("rf-source-img").naturalWidth, h: $("rf-source-img").naturalHeight },
   stamps: state.reviewFiles[iJpg].stamps.map((s) => s.rotate_degrees), state: $("rf-rot-state").textContent,
-  resetShown: !$("rf-rot-reset").hidden };
+  resetShown: !$("rf-rot-reset").classList.contains("is-invisible") };
 await pause("確認画面・回転後");
 $("rf-rot-bar").querySelector('[data-rot="reset"]').click();
 await sleep(500);

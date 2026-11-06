@@ -528,6 +528,76 @@ section("ファイル名の番号と証拠番号を、ボタンで片方に合�
   S.reviewFiles = [];
 }
 
+section("確認画面のプレビュー: ページで分けた枝番のページの対応と、帯を出すページ（5.3.0）");
+{
+  const S = vm.runInContext("state", ctx);
+  const whole = { path: "C:/x/a.pdf", name: "a.pdf", pageRange: null };
+  const piece = { path: "C:/x/a.pdf", name: "a.pdf", pageRange: [3, 5] };
+  check("分けていなければ元のページ番号のまま", ctx.sourcePageToRfPage(whole, 4) === 4);
+  check("3〜5ページの枝番: 元の3ページ目＝その証拠の1ページ目", ctx.sourcePageToRfPage(piece, 3) === 1);
+  check("3〜5ページの枝番: 元の5ページ目＝3ページ目", ctx.sourcePageToRfPage(piece, 5) === 3);
+  check("範囲の外のページは 0（その証拠に入らない）",
+    ctx.sourcePageToRfPage(piece, 2) === 0 && ctx.sourcePageToRfPage(piece, 6) === 0);
+
+  // 帯は「出力の1ページ目」にだけ出す。同じ番号で結合される枝番は、先頭（枝番の小さいほう）だけ
+  const b1 = { path: "C:/x/b1.pdf", name: "b1.pdf", evidenceNumber: "甲002", branchRange: "1", stamps: [] };
+  const b2 = { path: "C:/x/b2.pdf", name: "b2.pdf", evidenceNumber: "甲002", branchRange: "2", stamps: [] };
+  const solo = { path: "C:/x/c.pdf", name: "c.pdf", evidenceNumber: "甲003", branchRange: null, stamps: [] };
+  S.reviewFiles = [b2, b1, solo];
+  S.renameOnly = false;
+  check("結合の先頭（甲2の1）の1ページ目には帯を出す", ctx.stampOnOutputFirstPage(b1, { page: 1 }) === true);
+  check("結合の2つ目（甲2の2）には帯を出さない（出力では途中のページになる）", ctx.stampOnOutputFirstPage(b2, { page: 1 }) === false);
+  check("1つだけの証拠の1ページ目には帯を出す", ctx.stampOnOutputFirstPage(solo, { page: 1 }) === true);
+  check("2ページ目には帯を出さない", ctx.stampOnOutputFirstPage(solo, { page: 2 }) === false);
+  S.mergeDisabled.add("甲002");
+  check("「別々に出力」にしたら甲2の2にも帯を出す", ctx.stampOnOutputFirstPage(b2, { page: 1 }) === true);
+  S.mergeDisabled.delete("甲002");
+  S.reviewFiles = [];
+}
+
+section("向き: すべてのページ・そのページだけ（5.3.0）");
+{
+  const mk = () => ({ path: "C:/x/scan.pdf", name: "scan.pdf", pageCount: 3, pageRange: null, evidenceNumber: "甲005",
+    stamps: [{ page: 1, branch: null, draw_label: true, rotate_degrees: 0, position: { x: 0.93, y: 0.07, anchor: "top-right" } }] });
+  const rf = mk();
+  ctx.rotateAllPages([rf], "90");
+  check("すべてのページ: 3ページとも右に90°", [1, 2, 3].every((p) => ctx.pageRotation(rf, p) === 90),
+    JSON.stringify([1, 2, 3].map((p) => ctx.pageRotation(rf, p))));
+  check("すべて同じ向き → 状態は右に90°", ctx.uniformRotation([rf]) === 90);
+  check("押印の行は1ページ目の番号だけ（回転のために足した指示は行にしない）", ctx.stampRowsOf(rf).length === 1);
+  ctx.setPageRotation(rf, 2, ctx.nextRotation(ctx.pageRotation(rf, 2), "-90"));
+  check("2ページ目だけ左に90° → 2ページ目は元の向き、ほかは右に90°",
+    ctx.pageRotation(rf, 1) === 90 && ctx.pageRotation(rf, 2) === 0 && ctx.pageRotation(rf, 3) === 90);
+  check("向きがページごとに違う → 状態は null（ページごとに違います）", ctx.uniformRotation([rf]) === null);
+  check("向きを戻した2ページ目の「回転だけ」の指示は消える", !rf.stamps.some((s) => s.page === 2));
+  ctx.rotateAllPages([rf], "90");
+  check("すべてのページをさらに右に90° → 差は保ったまま（180°・90°・180°）",
+    ctx.pageRotation(rf, 1) === 180 && ctx.pageRotation(rf, 2) === 90 && ctx.pageRotation(rf, 3) === 180);
+  ctx.rotateAllPages([rf], "reset");
+  check("元に戻す → すべて元の向き・回転だけの指示は残らない",
+    ctx.uniformRotation([rf]) === 0 && rf.stamps.length === 1 && rf.stamps[0].draw_label === true, JSON.stringify(rf.stamps));
+
+  // 同じページにスタンプが2つ（番号と枝番など）あるときは、最初のものだけが角度を持つ（エンジンは1ページ1回）
+  const two = mk();
+  two.stamps.push({ page: 1, branch: "2", draw_label: true, rotate_degrees: 0, position: { x: 0.5, y: 0.5, anchor: "center" } });
+  ctx.setPageRotation(two, 1, 90);
+  check("同じページの2つ目のスタンプは 0（足し算で 180° にならない）",
+    two.stamps[0].rotate_degrees === 90 && two.stamps[1].rotate_degrees === 0);
+
+  // スタンプが無い証拠: 1ページ目はふつうのスタンプ（押印の行を兼ねる）として足す
+  const bare = { path: "C:/x/b.pdf", name: "b.pdf", pageCount: 2, pageRange: null, evidenceNumber: "甲006", stamps: [] };
+  ctx.rotateAllPages([bare], "180");
+  check("スタンプが無くても全ページ回る", ctx.pageRotation(bare, 1) === 180 && ctx.pageRotation(bare, 2) === 180);
+  check("1ページ目は押印の行に出る（押さない）・2ページ目は出ない",
+    ctx.stampRowsOf(bare).length === 1 && ctx.stampRowsOf(bare)[0].page === 1 && ctx.stampRowsOf(bare)[0].draw_label === false);
+
+  // ページで分けた枝番: その証拠のページ数（範囲）だけ回す
+  const piece = { path: "C:/x/s.pdf", name: "s.pdf", pageCount: 9, pageRange: [4, 6], evidenceNumber: "甲007", stamps: [] };
+  ctx.rotateAllPages([piece], "90");
+  check("4〜6ページの枝番: 回るのはその証拠の3ページだけ", ctx.rfPageCount(piece) === 3
+    && [1, 2, 3].every((p) => ctx.pageRotation(piece, p) === 90) && !piece.stamps.some((s) => s.page > 3));
+}
+
 // 取り込み経路は2つある。片方だけ項目を足すと警告が出なくなる（実際に A3 超の警告で発生した）ので、
 // 両方が集約関数を通っていることをソースで確認する。
 {

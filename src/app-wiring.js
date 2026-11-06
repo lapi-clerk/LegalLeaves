@@ -541,13 +541,33 @@ $("preview-bulk-done").addEventListener("click", () => { applyBulkStamp("done");
 $("preview-rot-bar").addEventListener("click", (e) => {
   const b = e.target.closest(".rot-btn");
   if (!b) return;
-  const targets = previewStampTargets(state.previewFiles[state.selectedPreview]);
-  setPreviewRotate(nextRotation(filesRotation(targets), b.dataset.rot));
+  if (b.dataset.prot) setPreviewPageRotate(b.dataset.prot); // v5.3.2: 表示中のページだけ
+  else setPreviewRotate(b.dataset.rot);
 });
+// v5.3.2: スクロールで「表示中のページ」を追う（画面の中ほどに見えているページ）
+{
+  let ticking = false;
+  $("pv-scroll").addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; pvUpdateCurrentPage(); });
+  }, { passive: true });
+}
 $("rf-rot-bar").addEventListener("click", (e) => {
   const b = e.target.closest(".rot-btn");
-  if (b) rotateInReview(b.dataset.rot);
+  if (b && b.dataset.prot) rotatePageInReview(b.dataset.prot); // v5.3.3: 表示中のページだけ
+  else if (b) rotateInReview(b.dataset.rot);
 });
+$("rf-overlay-toggle").addEventListener("change", (e) => setSourceOverlay(e.target.checked));
+// v5.3.3: 確認画面のプレビューも「表示中のページ」を追う（出力前のプレビューと同じ形）
+{
+  let ticking = false;
+  $("rf-source-preview").addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; updateReviewCurrentPage(); });
+  }, { passive: true });
+}
 
 $("export-next-btn").addEventListener("click", async () => {
   const outputs = buildOutputPlan();

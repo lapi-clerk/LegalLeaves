@@ -1,11 +1,11 @@
 ﻿VSVersionInfo(
-  ffi=FixedFileInfo(filevers=(5, 2, 6, 0), prodvers=(5, 2, 6, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+  ffi=FixedFileInfo(filevers=(5, 3, 4, 0), prodvers=(5, 3, 4, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('041104B0', [
       StringStruct('ProductName', 'LegalLeaves'),
       StringStruct('FileDescription', 'LegalLeaves'),
-      StringStruct('ProductVersion', '5.2.6'),
-      StringStruct('FileVersion', '5.2.6'),
+      StringStruct('ProductVersion', '5.3.4'),
+      StringStruct('FileVersion', '5.3.4'),
       StringStruct('LegalCopyright', 'MIT License'),
       StringStruct('OriginalFilename', 'LegalLeaves.exe')])]),
     VarFileInfo([VarStruct('Translation', [1041, 1200])])

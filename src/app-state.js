@@ -70,7 +70,7 @@ function noAiData() {
   return !state.aiText.trim() && (state.renameOnly || state.noAi);
 }
 
-// 確認画面の「元ファイルを見る」インラインプレビュー
+// 確認画面の「プレビューを見る」インラインプレビュー
 let sourcePreviewUrl = null;
 let sourcePreviewPath = null;
 

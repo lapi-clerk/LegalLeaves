@@ -41,10 +41,10 @@ advanceStep("export");
 await openPreview(buildOutputPlan());
 await showPreviewFile(0);
 r.steps.push(await snapshot("回す前"));
-await setPreviewRotate(90);
+await setPreviewRotate("90"); // 5.3.0: 角度ではなくボタンの指定（右に90°）
 r.steps.push(await snapshot("90度回した後"));
-await setPreviewRotate(180);
+await setPreviewRotate("90"); // もう一度右に90° → 180°
 r.steps.push(await snapshot("180度にした後"));
-await setPreviewRotate(0);
+await setPreviewRotate("reset");
 r.steps.push(await snapshot("0度に戻した後"));
 return r;

@@ -12,6 +12,8 @@ function renderEvidenceDerived(rf) {
   // なので、「AIの値に戻す」ヒントもここで更新する（入力中に即時表示されるように）。
   renderAiOriginalHint("rf-evnum-orig", rf, "evidenceNumber", rf.evidenceNumber);
   renderNumMismatch(rf);
+  // 開いているプレビューの番号・帯も追従させる（この関数を抜けて、押印の行が整った後に）
+  queueMicrotask(() => refreshSourceOverlay(rf));
   const mergeNote = $("rf-merge-note");
   const num = rf.evidenceNumber;
   const groupN = evidenceGroupCount(num);
@@ -40,14 +42,14 @@ function renderEvidenceDerived(rf) {
 
   const list = $("rf-stamp-list");
   list.innerHTML = "";
-  const stamps = Array.isArray(rf.stamps) ? rf.stamps : [];
+  const stamps = stampRowsOf(rf); // ページを回すために足した「回転だけ」の指示は行にしない
   if (!stamps.length) {
     if (rf.evidenceNumber) {
       // 「押印を追加」ボタンという別パラダイムを廃止。番号があるのにスタンプが無い
       // ときは、既定で「押印なし（draw_label:false）」のスタンプを実際に持たせ、
       // 既存の押印なし行と同じトグル行で表示する（トグルでオン/オフ）。出力結果は不変。
       const stamp = { page: 1, branch: null, draw_label: false, rotate_degrees: 0, position: { x: 0.93, y: STAMP_SAFE_Y, anchor: "top-right" } };
-      rf.stamps = [stamp];
+      rf.stamps = [stamp, ...(Array.isArray(rf.stamps) ? rf.stamps : [])];
       list.appendChild(makeStampRow(rf, stamp));
     } else {
       const none = document.createElement("div");
@@ -199,51 +201,139 @@ function applyNumFix(rf, which) {
 
 // v5.2.1: 向きを直すボタン（確認画面のプレビューの上と、出力前プレビューで共通）。
 // rotate_degrees は AI との約束どおり「時計回り」の角度。右に90°＝+90、左に90°＝+270。
-// 号証のスタンプすべてに同じ角度を入れる（スタンプが無ければ回転だけのスタンプを1ページ目に足す。
-// 出力前プレビューの setPreviewRotate と同じ扱い）。回るのはスタンプのあるページ（ふつうは1ページ目）。
+// 5.3.0 から、上のボタンは全ページを同じだけ回し、確認画面では各ページの上のボタンでそのページだけ回せる
+// （5.2.x までは1ページ目だけが回っていた）。
 function rotationLabel(deg) {
   return { 0: "元の向き", 90: "右に90°回転", 180: "180°回転", 270: "左に90°回転" }[normalizeAngle(deg)];
 }
-function filesRotation(rfs) {
-  for (const rf of rfs) for (const s of rf.stamps || []) if (s) return normalizeAngle(s.rotate_degrees ?? s.rotate ?? 0);
-  return 0;
+
+// v5.3.0: ページごとの向き。1ページの回転は「そのページの最初のスタンプ」が持つ（エンジンは1ページ1回、
+// 最初の指示の角度で回す）。同じページの2つ目以降は 0 にしておく（出力前プレビューは足し算で見るため）。
+function rfPageCount(rf) {
+  if (rf.pageRange) return rf.pageRange[1] - rf.pageRange[0] + 1;
+  if (isImageSrc(rf.path)) return 1;
+  const fromStamps = Math.max(1, ...(rf.stamps || []).map((s) => (s && s.page) || 1));
+  return Math.max(rf.pageCount || 0, fromStamps);
 }
-function setFilesRotation(rfs, deg) {
+function pageRotation(rf, p) {
+  const s = (rf.stamps || []).find((x) => x && (x.page ?? 1) === p);
+  return s ? normalizeAngle(s.rotate_degrees ?? s.rotate ?? 0) : 0;
+}
+function setPageRotation(rf, p, deg) {
   const d = normalizeAngle(deg);
+  const stamps = Array.isArray(rf.stamps) ? rf.stamps : [];
+  const onPage = stamps.filter((s) => s && (s.page ?? 1) === p);
+  if (!onPage.length) {
+    if (!d) return;
+    // 番号を押さない「回転だけ」の指示（_rotOnly）。押印の行には出さない
+    // 1ページ目は押印の行（押す／押さない）を兼ねるので、ふつうのスタンプとして足す
+    const s = { page: p, branch: null, draw_label: false, rotate_degrees: d, position: { x: 0.93, y: STAMP_SAFE_Y, anchor: "top-right" } };
+    if (p > 1) s._rotOnly = true;
+    stamps.push(s);
+  } else {
+    onPage.forEach((s, i) => { s.rotate_degrees = i === 0 ? d : 0; if ("rotate" in s) delete s.rotate; });
+  }
+  // 「回転だけ」の指示は、向きを戻したら消す（何もしない指示を残さない）
+  rf.stamps = stamps.filter((s) => !(s && s._rotOnly && !normalizeAngle(s.rotate_degrees ?? 0)));
+}
+// 全ページを同じだけ回す（ページごとに違う向きは、その差を保ったまま回る）。rotAttr は "90" "-90" "180" "reset"
+function rotateAllPages(rfs, rotAttr) {
   for (const rf of rfs) {
-    if (!rf.stamps || !rf.stamps.length) {
-      rf.stamps = [{ page: 1, branch: null, draw_label: false, rotate_degrees: d, position: { x: 0.93, y: STAMP_SAFE_Y, anchor: "top-right" } }];
-    } else {
-      rf.stamps = rf.stamps.map((s) => ({ ...s, rotate_degrees: d }));
+    const n = rfPageCount(rf);
+    for (let p = 1; p <= n; p++) setPageRotation(rf, p, nextRotation(pageRotation(rf, p), rotAttr));
+  }
+}
+// 向きの状態（全ページ同じなら その向き。ページごとに違えば null）
+function uniformRotation(rfs) {
+  let first = null;
+  for (const rf of rfs) {
+    for (let p = 1; p <= rfPageCount(rf); p++) {
+      const r = pageRotation(rf, p);
+      if (first === null) first = r;
+      else if (r !== first) return null;
     }
   }
+  return first || 0;
+}
+// 押印の行に出すスタンプ（ページを回すために足した「回転だけ」の指示は行にしない。向きはプレビューで見る）
+function stampRowsOf(rf) {
+  return (rf.stamps || []).filter((s) => s && !s._rotOnly);
 }
 // ボタンの押下 → 新しい角度（data-rot が "reset" なら 0）
 function nextRotation(current, rotAttr) {
   return rotAttr === "reset" ? 0 : normalizeAngle(current + Number(rotAttr));
 }
 // 状態の表示（prefix: "rf" | "preview"）。pagesNote は「1ページ目だけ回る」などの補足
-function renderRotState(prefix, deg, pagesNote) {
+// deg が null ＝ページごとに向きが違う。状態の文字はボタンの右に置く（文字の長さでボタンが動かないように）
+function renderRotState(prefix, deg) {
   const el = $(`${prefix}-rot-state`);
-  el.textContent = `向き: ${rotationLabel(deg)}${deg && pagesNote ? pagesNote : ""}`;
-  el.classList.toggle("is-rotated", !!deg);
-  $(`${prefix}-rot-reset`).hidden = !deg;
+  el.textContent = deg === null ? "向き: ページごとに違います" : `向き: ${rotationLabel(deg)}`;
+  el.classList.toggle("is-rotated", deg !== 0);
+  // 「元に戻す」は隠しても場所を取っておく（後ろの「表示中のページ」のボタンが動かないように。v5.3.2）
+  const reset = $(`${prefix}-rot-reset`);
+  reset.hidden = false;
+  reset.classList.toggle("is-invisible", deg === 0);
+  reset.disabled = deg === 0;
 }
 // 確認画面で回せるファイルか（出力前プレビューの previewStampTargets と同じ範囲＝号証番号のある証拠）
 function canRotateInReview(rf) {
   return !!rf && !state.renameOnly && !!rf.evidenceNumber && !isAvName(rf.name);
 }
-// 確認画面: そのページに効く回転（時計回り）
-function stampRotationForPage(rf, n) {
-  const s = (rf.stamps || []).find((x) => x && (x.page ?? 1) === n && normalizeAngle(x.rotate_degrees ?? x.rotate ?? 0));
-  return s ? normalizeAngle(s.rotate_degrees ?? s.rotate) : 0;
-}
+// 上のボタン: このファイルの全ページを回す（v5.3.0。以前は1ページ目だけ回っていた）
 async function rotateInReview(rotAttr) {
   const rf = state.reviewFiles[state.selectedReview];
   if (!canRotateInReview(rf)) return;
-  setFilesRotation([rf], nextRotation(filesRotation([rf]), rotAttr));
+  rotateAllPages([rf], rotAttr);
   renderEvidenceDerived(rf);
-  if (!$("rf-source-preview").hidden) await openSourcePreview(rf);
+  if ($("rf-source-preview").hidden || sourcePreviewPath !== rf.path) return;
+  if (isImageSrc(rf.path)) { await openSourcePreview(rf); return; }
+  renderRotState("rf", uniformRotation([rf]));
+  renderReviewPageRot(rf);
+  await Promise.all(Object.keys(srcPv.pages).map((n) => srcPv.redraw && srcPv.redraw(Number(n))));
+}
+// 「表示中のページ」だけ回す（縦横が混ざったスキャンの手直し用）。v5.3.3 で各ページの上のボタンから、
+// 出力前のプレビューと同じ「表示中のページ」の形にそろえた（試用で操作しやすかったほう）
+async function rotatePageInReview(rotAttr) {
+  const rf = state.reviewFiles[state.selectedReview];
+  const n = srcPv.currentPage || 1; // 元ファイルのページ番号
+  const p = rf ? sourcePageToRfPage(rf, n) : 0;
+  if (!canRotateInReview(rf) || !p) return;
+  setPageRotation(rf, p, nextRotation(pageRotation(rf, p), rotAttr));
+  renderEvidenceDerived(rf);
+  renderRotState("rf", uniformRotation([rf]));
+  renderReviewPageRot(rf);
+  if (srcPv.redraw) await srcPv.redraw(n);
+}
+// 「表示中のページ」＝プレビューの枠の中ほどにあるページ（その証拠に入らないページは選ばない）
+function updateReviewCurrentPage() {
+  const rf = state.reviewFiles[state.selectedReview];
+  const slots = srcPv.slots || [];
+  if (!rf || !slots.length || $("rf-page-rot").hidden) return;
+  const box = $("rf-source-preview").getBoundingClientRect();
+  const bar = document.querySelector("#rf-source-preview .src-pv-head");
+  const top = box.top + (bar ? bar.offsetHeight : 0); // 上に残る帯の下から測る
+  const mid = top + (box.bottom - top) / 2;
+  let best = srcPv.currentPage;
+  let bestDist = Infinity;
+  for (const slot of slots) {
+    const n = Number(slot.dataset.page);
+    if (!sourcePageToRfPage(rf, n)) continue;
+    const r = slot.getBoundingClientRect();
+    const d = mid < r.top ? r.top - mid : mid > r.bottom ? mid - r.bottom : 0;
+    if (d < bestDist) { bestDist = d; best = n; }
+  }
+  if (best !== srcPv.currentPage) {
+    srcPv.currentPage = best;
+    renderReviewPageRot(rf);
+  }
+}
+function renderReviewPageRot(rf) {
+  if ($("rf-page-rot").hidden || !rf) return;
+  const p = sourcePageToRfPage(rf, srcPv.currentPage || 1);
+  const r = p ? pageRotation(rf, p) : 0;
+  const now = $("rf-page-now");
+  now.textContent = p ? `${p}ページ目${r ? `（${rotationLabel(r)}）` : ""}` : "";
+  now.classList.toggle("is-rotated", !!r);
 }
 // 画像を時計回りに回した表示用の URL（ブラウザは向きの情報を反映して描くので、見えている向きから回る）
 async function rotatedImageUrl(url, deg) {
@@ -369,10 +459,114 @@ function needsAttention(rf) {
 // 「元ファイルそのもの」をカード内に表示する（再生成なし）。PDFは同梱PDF.jsで直接
 // 描画する＝Chromium内蔵ビュワーのサムネイル欄・ツールバーが幅を取る問題がない。
 // Office・音声・動画などインライン表示できない形式はOSの既定アプリで開く。
-const srcPv = { task: null, seq: 0, observer: null, opening: null };
+// v5.3.0: 出力前プレビューと同じく、押される証拠番号とタイムスタンプ帯を重ねて見せる（切り替え可）。
+//   PDF は元のページの上に、画像は出力と同じ A4 の紙面（上に番号用の白帯）を作って重ねる。
+//   番号はここでもドラッグで動かせる（出力前プレビューと同じ扱い）。
+const srcPv = { task: null, seq: 0, observer: null, opening: null, pages: {}, overlayOn: true };
+
+// 画像を出力と同じ A4 の紙面に置いた見本（pdf_engine.py の _image_page_pdf と同じ寸法）。
+const IMG_PAGE_MARGIN_PT = 34;
+const IMG_PAGE_TOP_BAND_PT = 80;
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = reject;
+    im.src = url;
+  });
+}
+async function drawImageAsPage(url, canvas, width) {
+  const im = await loadImage(url);
+  const rw = im.naturalWidth;
+  const rh = im.naturalHeight;
+  const landscape = rw > rh;
+  const pw = landscape ? A4_PT.h : A4_PT.w;
+  const ph = landscape ? A4_PT.w : A4_PT.h;
+  const availW = pw - IMG_PAGE_MARGIN_PT * 2;
+  const availH = ph - IMG_PAGE_MARGIN_PT - IMG_PAGE_TOP_BAND_PT;
+  const k = Math.min(availW / rw, availH / rh);
+  const dw = rw * k;
+  const dh = rh * k;
+  const left = (pw - dw) / 2;
+  const top = ph - (IMG_PAGE_MARGIN_PT + (availH - dh) / 2) - dh; // PDF は下から測るので上からに直す
+  const scale = width / pw; // 1pt あたりの px
+  const cssW = Math.floor(pw * scale);
+  const cssH = Math.floor(ph * scale);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(cssW * dpr);
+  canvas.height = Math.floor(cssH * dpr);
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, cssW, cssH);
+  ctx.drawImage(im, left * scale, top * scale, dw * scale, dh * scale);
+  return { scale, cssW, cssH };
+}
+
+// rf が元ファイルの一部のページだけ（ページで分けた枝番）のとき、元のページ n はその証拠の何ページ目か。
+// 範囲の外なら 0。
+function sourcePageToRfPage(rf, n) {
+  if (!rf.pageRange) return n;
+  const [from, to] = rf.pageRange;
+  return n >= from && n <= to ? n - from + 1 : 0;
+}
+
+// 確認画面のプレビューの1ページに、番号と帯を敷き直す。
+function layoutSourceOverlay(rf, n) {
+  const e = srcPv.pages[n];
+  if (!e) return;
+  const ov = e.overlay;
+  ov.innerHTML = "";
+  ov.style.width = `${e.cssW}px`;
+  ov.style.height = `${e.cssH}px`;
+  const p = e.isImage ? 1 : sourcePageToRfPage(rf, n);
+  e.slot.classList.toggle("is-outside", p === 0);
+  if (p === 0) {
+    const note = document.createElement("div");
+    note.className = "src-outside-note";
+    note.textContent = "この証拠には入らないページです";
+    ov.appendChild(note);
+    return;
+  }
+  if (!srcPv.overlayOn) return;
+  if (p === 1 && stampOnOutputFirstPage(rf, { page: 1 })) ov.appendChild(makeTimestampZoneEl(e));
+  if (state.renameOnly) return; // 名前だけ整えるときは番号を押さない
+  for (const s of rf.stamps || []) {
+    if (!s || (s.page ?? 1) !== p || s.draw_label === false) continue;
+    const label = deriveStampLabel(rf.evidenceNumber, s.branch ?? null);
+    if (!label) continue;
+    const el = makeStampLabelEl(label, s, e);
+    ov.appendChild(el);
+    pvPositionStamp(el, s, e, e.isImage);
+    // v5.3.0: ここでもドラッグで位置を直せる（帯との重なりの警告など、押印の行も合わせて更新する）
+    pvMakeDraggable(el, s, e, e.isImage, () => renderEvidenceDerived(rf));
+  }
+}
+
+// 番号・枝番・押印・結合の設定が変わったときに、開いているプレビューの重ね表示を追従させる。
+function refreshSourceOverlay(rf) {
+  if (!rf || sourcePreviewPath !== rf.path || $("rf-source-preview").hidden) return;
+  for (const n of Object.keys(srcPv.pages)) layoutSourceOverlay(rf, Number(n));
+}
+
+// 「証拠番号とタイムスタンプ帯を重ねる」の切り替え。画像は紙面の見本と元の画像を描き分けるので開き直す。
+async function setSourceOverlay(on) {
+  srcPv.overlayOn = !!on;
+  const rf = state.reviewFiles[state.selectedReview];
+  if (!rf || sourcePreviewPath !== rf.path) return;
+  if (isImageSrc(rf.path)) await openSourcePreview(rf);
+  else refreshSourceOverlay(rf);
+}
 
 function clearSourcePreview() {
   srcPv.seq++;
+  srcPv.pages = {};
+  srcPv.redraw = null;
+  srcPv.slots = [];
+  srcPv.currentPage = 1;
+  $("rf-page-rot").hidden = true;
   if (srcPv.observer) {
     srcPv.observer.disconnect();
     srcPv.observer = null;
@@ -394,7 +588,8 @@ function clearSourcePreview() {
   const img = $("rf-source-img");
   img.removeAttribute("src");
   img.hidden = true;
-  $("rf-source-preview-btn").textContent = "元ファイルを見る";
+  $("rf-overlay-bar").hidden = true;
+  $("rf-source-preview-btn").textContent = "プレビューを見る";
   // 横長レイアウト（プレビューを右カラムに）も解除
   const card = document.querySelector(".review-card");
   if (card) card.classList.remove("has-src-preview");
@@ -446,6 +641,7 @@ async function openSourcePreview(rf) {
   }
   sourcePreviewPath = rf.path;
   $("rf-source-preview").hidden = false;
+  $("rf-source-preview").scrollTop = 0;
   $("rf-source-preview-btn").textContent = "プレビューを閉じる";
   // 16:9等の横長画面ではプレビューを右カラムへ（CSSのメディアクエリ側で発効。
   // 縦長・画面分割時はクラスが付いていても従来どおり縦積みになる）
@@ -454,6 +650,11 @@ async function openSourcePreview(rf) {
 
   const rotatable = canRotateInReview(rf);
   $("rf-rot-bar").hidden = !rotatable;
+  // 名前だけ整える画像は元のまま出す（紙面にしない）ので、重ねる切り替えも出さない
+  const overlayable = res.ext === ".pdf" || !state.renameOnly;
+  $("rf-overlay-bar").hidden = !overlayable;
+  $("rf-overlay-toggle").checked = srcPv.overlayOn;
+  const pagesEl = $("rf-source-pages");
   if (res.ext !== ".pdf") {
     const mime = res.ext === ".png" ? "image/png" : "image/jpeg";
     sourcePreviewUrl = URL.createObjectURL(new Blob([res.bytes], { type: mime }));
@@ -466,13 +667,36 @@ async function openSourcePreview(rf) {
       URL.revokeObjectURL(sourcePreviewUrl);
       sourcePreviewUrl = turned;
     }
-    const img = $("rf-source-img");
-    img.src = sourcePreviewUrl;
-    img.hidden = false;
+    if (!overlayable || !srcPv.overlayOn) {
+      const img = $("rf-source-img");
+      img.src = sourcePreviewUrl;
+      img.hidden = false;
+      return;
+    }
+    // 出力と同じ A4 の紙面に置いて、番号と帯を重ねる
+    pagesEl.hidden = false;
+    const seq = srcPv.seq;
+    const slot = document.createElement("div");
+    slot.className = "source-page-slot";
+    const cv = document.createElement("canvas");
+    cv.className = "source-page-canvas";
+    const overlay = document.createElement("div");
+    overlay.className = "pv-overlay";
+    slot.append(cv, overlay);
+    pagesEl.appendChild(slot);
+    let m;
+    try {
+      m = await drawImageAsPage(sourcePreviewUrl, cv, Math.max(280, pagesEl.clientWidth - 24));
+    } catch (_) {
+      if (seq === srcPv.seq) pagesEl.textContent = "画像を表示できませんでした。";
+      return;
+    }
+    if (seq !== srcPv.seq) return;
+    srcPv.pages[1] = { slot, overlay, isImage: true, ...m };
+    layoutSourceOverlay(rf, 1);
     return;
   }
 
-  const pagesEl = $("rf-source-pages");
   pagesEl.hidden = false;
   if (!window.pdfjsLib) {
     pagesEl.textContent = "プレビュー部品（PDF.js）を読み込めませんでした。";
@@ -492,13 +716,12 @@ async function openSourcePreview(rf) {
     try { task.destroy(); } catch (_) {}
     return;
   }
-  if (rotatable) {
-    const pages = [...new Set((rf.stamps || []).map((s) => s.page ?? 1))].sort((a, b) => a - b);
-    renderRotState("rf", filesRotation([rf]),
-      doc.numPages > pages.length ? `（${pages.map((p) => `${p}ページ目`).join("・")}）` : "");
-  }
+  if (rotatable) renderRotState("rf", uniformRotation([rf]));
   const width = Math.max(280, pagesEl.clientWidth - 24);
   const slots = [];
+  // 2ページ以上ある証拠は、各ページの上に「このページだけ回す」ボタンを出す
+  // 2ページ以上ある証拠は、上の並びに「表示中のページ」だけ回すボタンを出す（v5.3.3。出力前のプレビューと同じ形）
+  $("rf-page-rot").hidden = !(rotatable && rfPageCount(rf) >= 2);
   for (let n = 1; n <= doc.numPages; n++) {
     const slot = document.createElement("div");
     slot.className = "source-page-slot";
@@ -507,6 +730,9 @@ async function openSourcePreview(rf) {
     pagesEl.appendChild(slot);
     slots.push(slot);
   }
+  srcPv.slots = slots;
+  srcPv.currentPage = rf.pageRange ? rf.pageRange[0] : 1;
+  renderReviewPageRot(rf);
   const fill = async (n) => {
     if (seq !== srcPv.seq) return;
     const page = await doc.getPage(n);
@@ -514,12 +740,18 @@ async function openSourcePreview(rf) {
     const cv = document.createElement("canvas");
     cv.className = "source-page-canvas";
     // 回していなければ rotation 省略＝元PDFの/Rotateどおり。回したページはその分を足して表示する（v5.2.1）
-    const extra = rotatable ? stampRotationForPage(rf, n) : 0;
-    await renderPdfPage(page, cv, extra ? { width, rotation: normalizeAngle((page.rotate || 0) + extra) } : { width });
+    // ページで分けた枝番は、その証拠の何ページ目かで回転を引く（範囲の外のページは回さない）
+    const p = sourcePageToRfPage(rf, n);
+    const extra = rotatable && p ? pageRotation(rf, p) : 0;
+    const m = await renderPdfPage(page, cv, extra ? { width, rotation: normalizeAngle((page.rotate || 0) + extra) } : { width });
     if (seq !== srcPv.seq) return;
     const slot = slots[n - 1];
     slot.style.minHeight = "";
-    slot.replaceChildren(cv);
+    const overlay = document.createElement("div");
+    overlay.className = "pv-overlay";
+    slot.replaceChildren(cv, overlay);
+    srcPv.pages[n] = { slot, overlay, isImage: false, ...m };
+    layoutSourceOverlay(rf, n);
     // pdf.jsが描けない画像（白黒スキャン=CCITTFax等）のページは真っ白になるので注記する
     if (await pvPageImageBlank(page, cv)) {
       if (seq !== srcPv.seq) return;
@@ -529,8 +761,15 @@ async function openSourcePreview(rf) {
       slot.appendChild(note);
     }
   };
+  srcPv.redraw = (n) => fill(n); // 向きを変えたページだけ描き直す（開き直さないのでスクロール位置が保たれる）
   const EAGER = 5;
   for (let n = 1; n <= Math.min(doc.numPages, EAGER); n++) await fill(n);
+  // ページで分けた枝番は、その証拠の最初のページまで送って見せる
+  if (rf.pageRange && rf.pageRange[0] > 1 && seq === srcPv.seq) {
+    const first = slots[rf.pageRange[0] - 1];
+    const box = $("rf-source-preview");
+    if (first) box.scrollTop += first.getBoundingClientRect().top - box.getBoundingClientRect().top - 8;
+  }
   if (doc.numPages > EAGER && seq === srcPv.seq) {
     srcPv.observer = new IntersectionObserver((entries) => {
       for (const en of entries) {

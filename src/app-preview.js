@@ -112,6 +112,7 @@ async function showPreviewFile(i) {
   }
   pvState.doc = doc;
   pvState.file = file;
+  pvState.currentPage = 1;
   pvState.stageW = Math.max(320, scroll.clientWidth - 36);
 
   const { rot } = pvPageOps(file);
@@ -147,6 +148,7 @@ async function showPreviewFile(i) {
   for (let n = PV_EAGER_PAGES + 1; n <= doc.numPages; n++) {
     pvState.observer.observe(pvState.pages[n - 1].wrap);
   }
+  renderPreviewPageRot();
 }
 
 // 同じcanvasへの多重render防止のため、ページごとに直列化する。
@@ -229,36 +231,46 @@ function pvLayoutOverlay(n) {
 
   // 裁判所タイムスタンプ帯（mints提出後に出力1ページ目へ付される・実測値）を半透明表示。
   // 帯は用紙上端からの物理位置なので pt 基準で描く（横向き画像ページ等でも正しい位置になる）。
-  if (n === 1) {
-    const sc = entry.scale; // px per pt
-    const z = document.createElement("div");
-    z.className = "pv-zone";
-    z.style.left = `${TS_LEFT_PT * sc}px`;
-    z.style.top = `${TS_TOP_PT * sc}px`;
-    z.style.width = `${entry.cssW - (TS_LEFT_PT + TS_RIGHT_MARGIN_PT) * sc}px`;
-    z.style.height = `${(TS_BOTTOM_PT - TS_TOP_PT) * sc}px`;
-    z.title = "mints提出後、ここに裁判所のタイムスタンプが付されます（実測位置）";
-    const zl = document.createElement("span");
-    zl.className = "pv-zone-label";
-    zl.textContent = "裁判所タイムスタンプ帯";
-    z.appendChild(zl);
-    overlay.appendChild(z);
-  }
+  if (n === 1) overlay.appendChild(makeTimestampZoneEl(entry));
 
   const { stamps } = pvPageOps(pvState.file);
   for (const ref of stamps) {
     if (ref.absPage !== n || ref.s.draw_label === false) continue;
     const label = deriveStampLabel(ref.rf.evidenceNumber, ref.s.branch ?? null);
     if (!label) continue;
-    const el = document.createElement("div");
-    el.className = "pv-stamp";
-    el.textContent = label;
-    const fontPt = ref.s.font_size_pt || 18; // 焼き込み既定と同じ18pt（pt→px = pt×scale）
-    el.style.fontSize = `${fontPt * entry.scale}px`;
+    const el = makeStampLabelEl(label, ref.s, entry);
     overlay.appendChild(el);
     pvPositionStamp(el, ref.s, entry, ref.isImage);
     pvMakeDraggable(el, ref.s, entry, ref.isImage);
   }
+}
+
+// タイムスタンプ帯の半透明の枠。entry = { scale（1pt あたりの px）, cssW }。
+// 出力前プレビューと確認画面のプレビューで共用する（同じ位置に出すため）。
+function makeTimestampZoneEl(entry) {
+  const sc = entry.scale;
+  const z = document.createElement("div");
+  z.className = "pv-zone";
+  z.style.left = `${TS_LEFT_PT * sc}px`;
+  z.style.top = `${TS_TOP_PT * sc}px`;
+  z.style.width = `${entry.cssW - (TS_LEFT_PT + TS_RIGHT_MARGIN_PT) * sc}px`;
+  z.style.height = `${(TS_BOTTOM_PT - TS_TOP_PT) * sc}px`;
+  z.title = "mints では提出後、ここに裁判所のタイムスタンプが付きます（A4縦で測った位置）";
+  const zl = document.createElement("span");
+  zl.className = "pv-zone-label";
+  zl.textContent = "裁判所タイムスタンプ帯";
+  z.appendChild(zl);
+  return z;
+}
+
+// 証拠番号のラベル（赤字・ドラッグで動かせる）。出力前プレビューと確認画面で共用。
+function makeStampLabelEl(label, s, entry) {
+  const el = document.createElement("div");
+  el.className = "pv-stamp";
+  el.textContent = label;
+  const fontPt = s.font_size_pt || 18; // 焼き込み既定と同じ18pt（pt→px = pt×scale）
+  el.style.fontSize = `${fontPt * entry.scale}px`;
+  return el;
 }
 
 function pvLayoutAllOverlays() {
@@ -293,10 +305,11 @@ function pvPositionStamp(el, s, entry, isImage) {
 // ドラッグで位置調整 → pointerup で正規化して rf.stamps[].position に書き戻す
 // （anchorは維持・x,yのみ更新。契約の余白ルール 0.03〜0.95 にクランプ）。
 // 画像は縦位置を帯直下へ固定するため、ドラッグ後も pvPositionStamp が縦を戻す（横のみ反映）。
-function pvMakeDraggable(el, s, entry, isImage) {
+// onDone: 置き終えたときに呼ぶ（確認画面では押印の行・帯の警告を更新する）
+function pvMakeDraggable(el, s, entry, isImage, onDone) {
   el.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    el.setPointerCapture(e.pointerId);
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
     const startX = e.clientX;
     const startY = e.clientY;
     const startLeft = parseFloat(el.style.left) || 0;
@@ -329,6 +342,7 @@ function pvMakeDraggable(el, s, entry, isImage) {
       const y = Math.min(0.95, Math.max(0.03, py / entry.cssH));
       s.position = { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000, anchor };
       pvPositionStamp(el, s, entry, isImage); // クランプ結果を見た目にも反映（画像は縦を帯直下へ戻す）
+      if (onDone) onDone();
     };
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
@@ -370,10 +384,11 @@ function renderPreviewStampControls() {
     $("preview-this-label").textContent = `この号証（${file.evidenceNumber}）の押印:`;
     $("preview-stamp-new").classList.toggle("is-active", willStamp);
     $("preview-stamp-done").classList.toggle("is-active", !willStamp);
-    renderRotState("preview", filesRotation(targets), "");
+    renderRotState("preview", uniformRotation(targets));
   } else {
     perWrap.hidden = true;
   }
+  renderPreviewPageRot();
 }
 
 // normalize to 0/90/180/270 (renderer copy of the engine's rule)
@@ -418,12 +433,64 @@ async function regeneratePreviewFile() {
 // Sets the correction angle on the 号証's stamp(s); if there are none, adds a
 // rotation-only stamp on page 1 so the page still gets rotated.
 // PDFはviewport回転の再計算だけで即時。画像は白帯が回転で崩れるためベースPDFへ焼き込む＝再生成する。
-async function setPreviewRotate(deg) {
+// v5.3.2: 「表示中のページ」＝プレビューの枠の中ほど（縦の真ん中）にあるページ。無ければいちばん近いページ。
+function pvUpdateCurrentPage() {
+  const scroll = $("pv-scroll");
+  if (!pvState.pages.length) return;
+  const box = scroll.getBoundingClientRect();
+  const mid = box.top + box.height / 2;
+  let best = pvState.pages[0].n;
+  let bestDist = Infinity;
+  for (const e of pvState.pages) {
+    const r = e.wrap.getBoundingClientRect();
+    const d = mid < r.top ? r.top - mid : mid > r.bottom ? mid - r.bottom : 0;
+    if (d < bestDist) { bestDist = d; best = e.n; }
+    if (d === 0) break;
+  }
+  if (best !== pvState.currentPage) {
+    pvState.currentPage = best;
+    renderPreviewPageRot();
+  }
+}
+// 出力のページ n は、どの証拠（rf）の何ページ目か
+function pvPageOwner(file, n) {
+  for (const src of pvSourceMap(file)) {
+    if (src.rf && n >= src.startPage && n < src.startPage + src.pageCount) return { rf: src.rf, p: n - src.startPage + 1 };
+  }
+  return null;
+}
+// 「表示中のページ」のボタンと、そのページの向きの表示（2ページ以上ある号証だけ）
+function renderPreviewPageRot() {
+  const group = $("preview-page-rot");
+  const file = state.previewFiles[state.selectedPreview];
+  const ok = !!pvState.doc && pvState.file === file && pvState.doc.numPages >= 2 && previewStampTargets(file).length > 0;
+  group.hidden = !ok;
+  if (!ok) return;
+  const n = pvState.currentPage || 1;
+  const owner = pvPageOwner(file, n);
+  const r = owner ? pageRotation(owner.rf, owner.p) : 0;
+  const now = $("preview-page-now");
+  now.textContent = `${n}ページ目${r ? `（${rotationLabel(r)}）` : ""}`;
+  now.classList.toggle("is-rotated", !!r);
+}
+async function setPreviewPageRotate(rotAttr) {
+  const file = state.previewFiles[state.selectedPreview];
+  const owner = file && pvPageOwner(file, pvState.currentPage || 1);
+  if (!owner || !previewStampTargets(file).includes(owner.rf)) return;
+  setPageRotation(owner.rf, owner.p, nextRotation(pageRotation(owner.rf, owner.p), rotAttr));
+  renderPreviewStampControls();
+  renderPreviewPageRot();
+  if (previewFileHasImage(file)) await regeneratePreviewFile();
+  else await pvApplyRotations();
+}
+
+// v5.3.0: 号証の全ページを同じだけ回す（rotAttr は "90" "-90" "180" "reset"。以前は1ページ目だけ回っていた）
+async function setPreviewRotate(rotAttr) {
   const file = state.previewFiles[state.selectedPreview];
   const targets = previewStampTargets(file);
   if (!targets.length) return;
-  setFilesRotation(targets, deg);
-  renderPreviewStampControls();
+  rotateAllPages(targets, rotAttr);
+  renderPreviewStampControls(); // 表示中のページの向きの表示もここで更新される
   if (previewFileHasImage(file)) await regeneratePreviewFile();
   else await pvApplyRotations();
 }
