@@ -1,6 +1,6 @@
 {
   "name": "legal-leaves",
-  "version": "5.2.5",
+  "version": "5.2.6",
   "description": "LegalLeaves — e裁判の書類を、軽っと整える。アプリ本体は Python（py/）。このファイルは自動テストと説明書PDF・配布物づくりの手順だけを持つ",
   "author": "LegalLeaves",
   "license": "MIT",
