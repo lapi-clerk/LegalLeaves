@@ -19,7 +19,11 @@ datas = [
     (os.path.join(ROOT, "assets", "LICENSE.txt"), "assets"),
     (os.path.join(ROOT, "assets", "THIRD-PARTY-NOTICES.md"), "assets"),
     (os.path.join(PY, "legalleaves", "web"), os.path.join("legalleaves", "web")),
+    # v5.4.0: 音声・動画の変換の部品（ffmpeg・LGPL 版・DLL 分割）。tools/fetch-ffmpeg.py で vendor/ffmpeg に取得しておく
+    (os.path.join(ROOT, "vendor", "ffmpeg"), os.path.join("vendor", "ffmpeg")),
 ]
+if not os.path.isfile(os.path.join(ROOT, "vendor", "ffmpeg", "ffmpeg.exe")):
+    raise SystemExit("vendor/ffmpeg がありません。先に tools/fetch-ffmpeg.py を実行してください（py/README.md を参照）。")
 
 a = Analysis(
     [os.path.join(PY, "launcher.py")],

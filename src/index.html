@@ -77,7 +77,7 @@
           <div class="dropzone" id="pdf-dropzone">
             <div class="dropzone-badge">PDF・画像・Office・音声動画</div>
             <div class="dropzone-title">ここにファイルをドラッグ＆ドロップ</div>
-            <div class="dropzone-sub">PDF / 画像 / Word・Excel・PowerPoint / RTF / 音声・動画 に対応（音声・動画はリネームのみ）</div>
+            <div class="dropzone-sub">PDF / 画像 / Word・Excel・PowerPoint / RTF / 音声・動画 に対応（音声は .mp3、動画は .mp4 にして出します）</div>
             <button class="primary-button dropzone-select" id="select-files-btn" type="button">ファイルを選択</button>
           </div>
 
@@ -284,7 +284,7 @@
       <section class="panel review-card">
         <div class="review-card-head">
           <div class="review-card-title">
-            <span class="pdf-badge">PDF</span>
+            <span class="pdf-badge" id="rf-type-badge">PDF</span>
             <h2 id="rf-name"></h2>
           </div>
           <span class="pill" id="rf-badge"></span>
@@ -400,7 +400,7 @@
 
           <div class="review-col" id="rf-meta-col">
             <div class="col-label-row">
-              <span class="col-label">PDF情報</span>
+              <span class="col-label" id="rf-meta-label">PDF情報</span>
               <span class="pill pill-danger" id="rf-delete-count">削除 0件</span>
             </div>
             <div id="rf-meta-rows"></div>
@@ -409,7 +409,7 @@
 
         <div class="evidence-block" id="rf-evidence-block">
           <div class="col-label-row">
-            <span class="col-label">証拠番号・押印</span>
+            <span class="col-label" id="rf-evidence-label">証拠番号・押印</span>
           </div>
           <label class="field evnum-field">
             <span class="field-label-row">証拠番号（証拠でなければ空欄）<span class="tag-warn" id="rf-evnum-tag" hidden>要確認</span></span>
@@ -444,6 +444,7 @@
             <label class="field">
               <span class="field-label" id="rf-created-label">作成年月日（例: R7.9.1）</span>
               <input id="rf-created-input" class="text-input" spellcheck="false" />
+              <span class="expl-draft-note" id="rf-created-draft-note" hidden></span>
             </label>
             <label class="field">
               <span class="field-label">原本・写し</span>
@@ -670,6 +671,7 @@
       <h3>① 読み込み</h3>
       <ul>
         <li>提出するファイル（PDF・画像・Word/Excel/PowerPoint・音声・動画）をドラッグ＆ドロップ、または「ファイルを選択」で追加します。</li>
+        <li>音声（.m4a・.wav・.wma など）は .mp3 に、動画（.mov・.avi・.wmv など）は .mp4 に、出力するときに変換します（mints・TreeeS に出せる形式のため）。変換はこのアプリの中だけで行い、外部には送りません。撮影場所（位置情報）・作成者・作成日時などの情報は消します。もともと .mp3・.mp4 のものも、画質・音質はそのままで情報だけを消します。長い動画は変換に時間がかかり、書き出しの間は進み具合が出ます。撮影した機器（iPhone・iPad など）が撮影時刻を記録していれば、確認画面の撮影日に下書きとして入れます（確かめてください）。元のファイルには日時などの情報が残るので、消さずに保管してください。</li>
         <li>「AI用プロンプトをコピー」でプロンプトをコピーし、AI（Gemini/ChatGPT等）に貼り付けてファイルを添付します。添付数に上限があるAIでは数回に分けて送り、最後に「完成」と入力します。</li>
         <li>「事務所の書き方メモを編集」に立証趣旨などの事務所独自の工夫を書いておくと、プロンプトのコピー時に自動で末尾へ追加されます（アプリを更新しても消えません）。</li>
         <li><strong>外部AIの利用について</strong>: 添付したファイルは外部のAIサービスに送信されます。事務所で認められたサービス・アカウントを使い、入力内容が学習に使われない設定（ビジネスプラン等）をご確認ください。コピーしたプロンプトはOSのクリップボードに残るため、クリップボード履歴・クラウド同期が有効な環境ではその設定にもご注意ください。</li>
@@ -705,6 +707,7 @@
         <li><strong>削除されるメタデータの範囲</strong>（事務所名・個人名が入りうる項目です）:
           <strong>タイトル・作成者・件名・キーワード・作成アプリ（Creator）・出力アプリ（Producer）</strong>と、
           <strong>XMP</strong>（WordがPDF出力時に埋め込む詳細情報。ビュワーのタブに残るのはこれです）。
+          写真（.jpg・.png）の<strong>撮影日時・撮影場所（位置情報）・機種などの情報（EXIF）</strong>も消します（画質は変わりません）。
           <br>次のものは<strong>削除の対象外</strong>です: 作成日時・更新日時、PDFに独自に埋め込まれた項目、
           PDF内のJavaScript・自動実行の設定、埋め込みファイル・添付、外部リンク、入力フォーム。
           <strong>本文（見えている文字・画像）に書かれた氏名や事務所名は消えません</strong>ので、
@@ -713,7 +716,7 @@
 
       <h3>④ 出力</h3>
       <ul>
-        <li>証拠説明書を作る設定で立証趣旨が1つでも入っていれば、プレビューの一覧のいちばん下の「証拠説明書（下書き）」で、書く内容を表で確かめられます（実際の書式は作成される Word で確かめてください）。</li>
+        <li>証拠説明書を作る設定なら、プレビューの一覧のいちばん下の「証拠説明書（下書き）」で、書く内容を表で確かめられます（実際の書式は作成される Word で確かめてください）。</li>
         <li>画面の上に「出力前チェック」が出ます。提出用ファイル名の番号と押す番号の食い違い、枝番の重なり・飛び、同じ名前のファイルなどがあれば一覧で知らせます（押すと確認画面のその証拠へ戻ります。そのまま作成することもできます）。</li>
         <li>保存先フォルダを選びます(ドラッグ＆ドロップでも指定できます)。同じ号証番号で枝番が分かれたファイルは、1つのPDFに自動で結合されます。</li>
         <li>「証拠説明書（下書き）も作成する」をオンにすると、証拠の内容から証拠説明書をWordとPDFで自動生成します（立証趣旨は下書きです）。書式は改正民事訴訟法（令和8年5月21日施行）の裁判所公式ひな形に準拠します（号証は半角「甲001」「甲002-1」、原本・写しは標目内に表記、記載がないものは電磁的記録として提出の扱い）。</li>

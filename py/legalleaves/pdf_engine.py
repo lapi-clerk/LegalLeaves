@@ -422,8 +422,146 @@ def _image_page_pdf(src_path, page_size=None, margin_pt=None, rotate=0):
 _EXIF_ROTATION = {3: 180, 6: 270, 8: 90}
 
 
+# JPEG の中で、画像の見た目に関わらない情報の区画（撮影日時・撮影場所（GPS）・機種などの EXIF、XMP、
+# IPTC・Photoshop の情報、コメント）。ReportLab は JPEG を作り直さずにそのまま PDF に入れるので、
+# 先に外しておかないと、出力した PDF の中に写真の撮影場所などが残る（5.4.5 まで残っていた）。
+# 色の情報（APP2 の ICC）・JFIF（APP0）・Adobe（APP14。CMYK の色の解釈に要る）は見た目に関わるので残す。
+_JPEG_DROP_MARKERS = {0xE1, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEF, 0xFE}
+
+
+def jpeg_without_metadata(data):
+    """JPEG のバイト列から、見た目に関わらない情報の区画を外したものを返す（画素は作り直さない＝画質は変わらない）。
+    JPEG として読めなければ None。"""
+    if not data.startswith(b"\xff\xd8"):
+        return None
+    out = bytearray(b"\xff\xd8")
+    i, n = 2, len(data)
+    while i < n:
+        if data[i] != 0xFF:
+            return None
+        while i < n and data[i] == 0xFF:  # 詰め物の FF
+            i += 1
+        if i >= n:
+            return None
+        marker = data[i]
+        i += 1
+        if marker == 0xDA:  # 画像の本体の始まり。ここから後ろはそのまま
+            out += b"\xff\xda" + data[i:]
+            return bytes(out)
+        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:  # 長さを持たない印
+            out += bytes((0xFF, marker))
+            continue
+        if marker == 0xD9:
+            out += b"\xff\xd9"
+            return bytes(out)
+        if i + 2 > n:
+            return None
+        seg_len = struct.unpack(">H", data[i:i + 2])[0]
+        if seg_len < 2 or i + seg_len > n:
+            return None
+        if marker not in _JPEG_DROP_MARKERS:
+            out += bytes((0xFF, marker)) + data[i:i + seg_len]
+        i += seg_len
+    return None
+
+
+# PNG の中で、画像の見た目に関わらない区画（文字の情報・EXIF・更新日時）
+_PNG_DROP_CHUNKS = {b"tEXt", b"zTXt", b"iTXt", b"eXIf", b"tIME"}
+
+
+def png_without_metadata(data):
+    """PNG のバイト列から、文字の情報・EXIF・更新日時の区画を外したものを返す（画素はそのまま）。読めなければ None。"""
+    sig = b"\x89PNG\r\n\x1a\n"
+    if not data.startswith(sig):
+        return None
+    out = bytearray(sig)
+    i, n = len(sig), len(data)
+    while i + 12 <= n:
+        length = struct.unpack(">I", data[i:i + 4])[0]
+        ctype = data[i + 4:i + 8]
+        end = i + 12 + length
+        if end > n:
+            return None
+        if ctype not in _PNG_DROP_CHUNKS:
+            out += data[i:end]
+        i = end
+        if ctype == b"IEND":
+            return bytes(out)
+    return None
+
+
+def photo_capture_info(src_path):
+    """写真の EXIF から、撮影日時（DateTimeOriginal＝カメラが撮った時刻として残すもの）・撮影場所の有無・機種。
+    確認画面で撮影日の下書きにし、提出用から消す情報として見せるため（5.4.6）。
+    更新日時（DateTime）は編集・書き出しの時刻のこともあるので使わない。"""
+    from PIL import Image
+    with Image.open(src_path) as im:
+        ex = im.getexif()
+        sub = ex.get_ifd(0x8769) or {}
+        gps = ex.get_ifd(0x8825) or {}
+        raw = str(sub.get(0x9003) or "").strip().strip("\x00")
+        make = str(ex.get(0x010F) or "").strip().strip("\x00")
+        model = str(ex.get(0x0110) or "").strip().strip("\x00")
+    when = None
+    # "2025:10:16 19:03:12"（その場所の時刻。時差は付けない）
+    if len(raw) >= 16 and raw[4] == ":" and raw[7] == ":":
+        y, mo, d, hh, mi = raw[0:4], raw[5:7], raw[8:10], raw[11:13], raw[14:16]
+        if (y + mo + d + hh + mi).isdigit() and int(y) >= 1980 and 1 <= int(mo) <= 12 and 1 <= int(d) <= 31:
+            when = f"{y}-{mo}-{d}T{hh}:{mi}"
+    device = model if model.lower().startswith(make.lower()) else " ".join(x for x in (make, model) if x)
+    return {"recordedAt": when, "hasLocation": bool(gps), "device": device or None}
+
+
+def image_bytes_without_metadata(src_path):
+    """名前だけ整えて写すとき用: JPEG・PNG から撮影日時・撮影場所などの情報を外したバイト列。
+    外せない（形式が違う・壊れている）ときは None（呼ぶ側で元のまま写すかを決める）。"""
+    with open(src_path, "rb") as f:
+        data = f.read()
+    if data.startswith(b"\xff\xd8"):
+        clean = jpeg_without_metadata(data)
+        if clean is None:
+            return None
+        # 向きの情報だけは残す（外すと、縦に持って撮った写真が横倒しで表示される）
+        try:
+            from PIL import Image
+            with Image.open(io.BytesIO(data)) as im:
+                orientation = im.getexif().get(0x0112, 1)
+        except Exception:
+            orientation = 1
+        if orientation in range(2, 9):
+            ex = Image.Exif()
+            ex[0x0112] = orientation
+            body = ex.tobytes()  # "Exif\0\0" + TIFF（向きの項目だけ）
+            if not body.startswith(b"Exif"):
+                body = b"Exif\x00\x00" + body
+            app1 = b"\xff\xe1" + struct.pack(">H", len(body) + 2) + body
+            clean = clean[:2] + app1 + clean[2:]
+        return clean
+    if data.startswith(b"\x89PNG"):
+        return png_without_metadata(data)
+    return None
+
+
+def _image_source_without_metadata(src_path):
+    """ReportLab に渡す画像。JPEG は情報の区画を外したもの（読めない JPEG は画素から作り直す）。
+    PNG などは ReportLab が画素に展開して入れ直すので、情報は PDF に入らない。"""
+    with open(src_path, "rb") as f:
+        data = f.read()
+    if not data.startswith(b"\xff\xd8"):
+        return src_path
+    clean = jpeg_without_metadata(data)
+    if clean is not None:
+        return io.BytesIO(clean)
+    from PIL import Image
+    with Image.open(io.BytesIO(data)) as im:
+        buf = io.BytesIO()
+        im.convert("RGB").save(buf, "JPEG", quality=95)
+    return io.BytesIO(buf.getvalue())
+
+
 def _image_reader_upright(src_path):
-    """(ImageReader, 追加で回す反時計回りの角度) を返す。向きの情報が無い・読めないときはそのまま。"""
+    """(ImageReader, 追加で回す反時計回りの角度) を返す。向きの情報が無い・読めないときはそのまま。
+    撮影日時・撮影場所などの情報は、ここで外したものを渡す（向きは外す前に読んで、回転で反映する）。"""
     try:
         from PIL import Image, ImageOps
         with Image.open(src_path) as im:
@@ -432,7 +570,7 @@ def _image_reader_upright(src_path):
                 return ImageReader(ImageOps.exif_transpose(im)), 0
     except Exception:
         orientation = 1
-    return ImageReader(src_path), _EXIF_ROTATION.get(orientation, 0)
+    return ImageReader(_image_source_without_metadata(src_path)), _EXIF_ROTATION.get(orientation, 0)
 
 
 def _image_bake_rotation(stamps):

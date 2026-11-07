@@ -27,11 +27,11 @@ from .paths import resource_path
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 ASSET_ALLOW = ("brand-logo.png", "fonts/")  # 画面が参照する assets だけを配る
 SOURCE_FILE_TYPES = (
-    "対応ファイル (*.pdf;*.jpg;*.jpeg;*.png;*.docx;*.doc;*.xlsx;*.xls;*.pptx;*.ppt;*.rtf;*.mp3;*.mp4)",
+    "対応ファイル (*.pdf;*.jpg;*.jpeg;*.png;*.docx;*.doc;*.xlsx;*.xls;*.pptx;*.ppt;*.rtf;*.mp3;*.mp4;*.m4a;*.wav;*.aac;*.wma;*.flac;*.ogg;*.opus;*.aiff;*.aif;*.amr;*.oga;*.mov;*.avi;*.wmv;*.mkv;*.m4v;*.flv;*.webm;*.3gp;*.3g2;*.mpeg;*.mpg;*.mts;*.m2ts;*.ts;*.vob)",
     "PDF (*.pdf)",
     "画像 (*.jpg;*.jpeg;*.png)",
     "Office・RTF (*.docx;*.doc;*.xlsx;*.xls;*.pptx;*.ppt;*.rtf)",
-    "音声・動画 (*.mp3;*.mp4)",
+    "音声・動画 (mp3・mp4 にして出します) (*.mp3;*.mp4;*.m4a;*.wav;*.aac;*.wma;*.flac;*.ogg;*.opus;*.aiff;*.aif;*.amr;*.oga;*.mov;*.avi;*.wmv;*.mkv;*.m4v;*.flv;*.webm;*.3gp;*.3g2;*.mpeg;*.mpg;*.mts;*.m2ts;*.ts;*.vob)",
 )
 QUIT_MESSAGE = "作業中の内容が失われます。本当に終了しますか？"
 
@@ -48,9 +48,7 @@ class Api:
         return self._app._token
 
     def get_initial_output_state(self):
-        recent = storage.read_recent_folders()
-        for p in recent:
-            self._app._session.remember_output_dir(p)
+        recent = self._visible_recent(storage.read_recent_folders())
         settings = storage.read_settings()
         return {
             "outputFolder": recent[0] if recent else "",
@@ -78,7 +76,13 @@ class Api:
             return None
         folder = r[0]
         self._app._session.remember_output_dir(folder)
-        return {"path": folder, "recentFolders": storage.add_recent_folder(folder)}
+        return {"path": folder, "recentFolders": self._visible_recent(storage.add_recent_folder(folder))}
+
+    def _visible_recent(self, folders):
+        # いま見つからないフォルダ（消した・移した・外付けを外した）は一覧に出さない。
+        # 出すと選べてしまい、出力のときに断られる（記録は残すので、戻せばまた出る）。
+        # 起動時だけでなく、フォルダを選んだ後に返す一覧も同じに絞る（5.4.2 では選んだ後に出ていた）。
+        return [p for p in folders if self._app._session.remember_output_dir(p)]
 
     def register_dropped_files(self, count=0):
         paths = self._app._take_dropped_paths()
@@ -161,6 +165,9 @@ class Api:
 
     def create_submission_files(self, payload):
         return self._app._session.create_submission_files(payload)
+
+    def get_progress(self):
+        return self._app._session.get_progress()
 
     def generate_preview(self, payload):
         return self._app._session.generate_preview(payload)

@@ -525,6 +525,20 @@ ${rf.confirmText}` : note;
   for (const rf of reviewFiles) {
     rf.initialNumbers = { evidenceNumber: rf.evidenceNumber, branchRange: rf.branchRange, suggested: rf.suggested };
   }
+  // v5.4.4: 音声・動画は、ファイルの中の撮影・録音日時を作成年月日（撮影日・録音日）の下書きにする。
+  // v5.4.6: 写真も、EXIF の撮影日時（DateTimeOriginal）から同じように下書きにする。
+  // 提出用からはこの情報を消すので、その前に読んだものを使う。AI の値や手で入れた値があればそちらを優先する。
+  for (const rf of reviewFiles) {
+    const src = state.files.find((f) => f.path === rf.path);
+    rf.captureMeta = (src && src.captureMeta) || null;
+    if (!(isAvName(rf.name) || isPhotoName(rf.name)) || !rf.captureMeta || !rf.captureMeta.recordedAt) continue;
+    const draft = toWarekiShort(rf.captureMeta.recordedAt);
+    const key = explanationFieldKeys(rf).date;
+    if (draft && !String(rf[key] || "").trim()) {
+      rf[key] = draft;
+      rf.dateDraftFromFile = draft;
+    }
+  }
 
   state.reviewFiles = reviewFiles;
   state.consistency = computeConsistency(reviewFiles, evidenceExplanation);

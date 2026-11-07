@@ -494,12 +494,12 @@ async function setPreviewRotate(rotAttr) {
   if (previewFileHasImage(file)) await regeneratePreviewFile();
   else await pvApplyRotations();
 }
-// v5.2.1: 出力前プレビューで証拠説明書の中身を見せるか。作る設定で、立証趣旨が1つでも書かれているとき
-// （AIが書いたものでも、確認画面で書いたものでも）。以前（v3.10）の Word→PDF に変換して見せるプレビューは
+// v5.2.1: 出力前プレビューで証拠説明書の中身を見せるか。以前（v3.10）の Word→PDF に変換して見せるプレビューは
 // 重いので撤去した。ここでは組み立てたデータを表にするだけなので軽い。
+// v5.4.6: 作る設定なら、立証趣旨が空でも出す（5.4.5 までは立証趣旨が1つも無いと出ず、AI を使わないときに
+// 作られる中身を確かめられなかった。空欄は ●● のまま見える）。
 function explanationPreviewAvailable() {
-  return !!state.generateExplanation && !state.renameOnly && !state.explanationExists && hasEvidenceFiles()
-    && state.reviewFiles.some((rf) => rf.evidenceNumber && String(rf.proofPurpose || "").trim());
+  return !!state.generateExplanation && !state.renameOnly && !state.explanationExists && hasEvidenceFiles();
 }
 function showExplanationPreview() {
   state.selectedPreview = -1;

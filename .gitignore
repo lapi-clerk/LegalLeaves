@@ -19,3 +19,6 @@ test/fixtures/*.tif
 py/.venv/
 py/build/
 __pycache__/
+
+# 音声・動画の変換の部品（ffmpeg）。tools/fetch-ffmpeg.py で取得する（約150MB のため入れない）
+vendor/

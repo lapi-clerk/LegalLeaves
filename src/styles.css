@@ -388,6 +388,10 @@ html, body { height: 100%; }
 .expl-fields[open] > summary { margin-bottom: 6px; }
 .expl-fields .field { margin-top: 8px; }
 .expl-fields-note { margin: 0 0 4px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.expl-draft-note { display: block; margin-top: 4px; font-size: 12px; color: var(--warn-fg); line-height: 1.5; }
+/* 音声・動画の情報は必ず消す（切り替えは無い）ので、つまみではなく札にする */
+.meta-fixed { flex: none; padding: 5px 14px; border-radius: 999px; background: var(--danger-fg); color: #fff;
+  font-size: 12px; font-weight: 700; white-space: nowrap; }
 .expl-purpose { min-height: 64px; resize: vertical; }
 
 /* v5.2.0: 出力した大きさとアップロードの上限の案内 */

@@ -15,7 +15,7 @@ import time
 import uuid
 import zipfile
 
-from . import docx_engine, fileio, pdf_engine, storage
+from . import docx_engine, fileio, media, pdf_engine, storage
 from .paths import resource_path
 
 SUBFOLDER_NAME = "提出用ファイル"
@@ -23,13 +23,10 @@ MAX_BATCH_FILES = 500
 MAX_SOURCE_FILE_BYTES = 500 * 1024 * 1024  # 1ファイル500MB
 
 OFFICE_EXTS = {".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".rtf"}
-AV_EXTS = {".mp3", ".mp4"}
-SOURCE_EXTS = {".pdf", ".jpg", ".jpeg", ".png", ".mp3", ".mp4"} | OFFICE_EXTS
+# 音声・動画: .mp3・.mp4 はそのまま（情報だけ外す）、ほかの形式は出力時に .mp3・.mp4 へ変換する（v5.4.0・media.py）
+AV_EXTS = {".mp3", ".mp4"} | media.CONVERT_EXTS
+SOURCE_EXTS = {".pdf", ".jpg", ".jpeg", ".png"} | AV_EXTS | OFFICE_EXTS
 OUTPUT_EXTS = {".pdf", ".mp3", ".mp4"}
-AV_UNSUPPORTED_EXTS = {
-    ".wav", ".m4a", ".aac", ".flac", ".ogg", ".oga", ".opus", ".wma", ".aiff", ".aif", ".amr",
-    ".mov", ".avi", ".wmv", ".mkv", ".m4v", ".flv", ".webm", ".3gp", ".3g2", ".mpeg", ".mpg", ".mts", ".ts", ".vob",
-}
 IMG_UNSUPPORTED_EXTS = {".gif", ".bmp", ".tif", ".tiff", ".webp", ".heic", ".heif", ".svg", ".ico"}
 OOXML_TEXT_EXTS = {".docx", ".docm"}
 INLINE_PREVIEW_EXTS = {".pdf", ".png", ".jpg", ".jpeg"}
@@ -48,11 +45,10 @@ def rejection_reason(name):
     ext = _ext(name)
     if not ext or ext in SOURCE_EXTS:
         return None
-    if ext in AV_UNSUPPORTED_EXTS:
-        return "音声・動画は .mp3 / .mp4 のみ提出できます。変換してからお試しください。"
     if ext in IMG_UNSUPPORTED_EXTS:
         return "画像は .jpeg / .png のみ対応です。変換してからお試しください。"
-    return "この形式は提出できません（対応: PDF／画像(.jpeg,.png)／Office(Word・Excel・PowerPoint・RTF)／音声(.mp3)・動画(.mp4)）。"
+    return ("この形式は提出できません（対応: PDF／画像(.jpeg,.png)／Office(Word・Excel・PowerPoint・RTF)／"
+            "音声(.mp3・.m4a・.wav など)・動画(.mp4・.mov・.avi など)）。")
 
 
 def oversize_reason(path):
@@ -116,8 +112,11 @@ def sanitize_file_name(file_name):
 
 
 def rename_only_dest(d, dest_name, src_path):
-    src_ext = _ext(src_path)
+    src_ext = media.target_ext(src_path) or _ext(src_path)  # 音声・動画は変換後の .mp3・.mp4
     base = clean_base_name(dest_name) or "untitled"
+    # 音声・動画で、名前に別の拡張子（元の .wav・誤った .pdf など）が付いていたら付け替える（「録音.wav.mp3」にしない）
+    if media.target_ext(src_path) and _ext(base) != src_ext and _ext(base) in (SOURCE_EXTS | OUTPUT_EXTS):
+        base = base[: -len(_ext(base))]
     if _ext(base) != src_ext:
         base += src_ext
     return dedupe_dest_path(d, base)
@@ -283,6 +282,8 @@ class Session:
         self.last_output_dir = ""
         self.preview_dir = ""
         self.dirty = False
+        # 書き出しの進み具合（音声・動画の変換は時間がかかるので画面から問い合わせる）。v5.4.0
+        self.progress = {"active": False}
 
     # --- 許可リスト ---
     def remember_source(self, path):
@@ -353,6 +354,23 @@ class Session:
                     out.append({"path": p, "name": os.path.basename(p), "fields": [],
                                 "officeMeta": inspect_docx_personal_info(p)})
                     continue
+                if ext in AV_EXTS:
+                    item = {"path": p, "name": os.path.basename(p), "fields": []}
+                    if media.available():
+                        try:
+                            item["captureMeta"] = media.recorded_info(p)
+                        except Exception:
+                            pass  # 日時が読めなくても、変換・出力はできる
+                    out.append(item)
+                    continue
+                if ext in (".jpg", ".jpeg", ".png"):
+                    item = {"path": p, "name": os.path.basename(p), "fields": []}
+                    try:
+                        item["captureMeta"] = pdf_engine.photo_capture_info(p)
+                    except Exception:
+                        pass  # 撮影日時が読めなくても、出力はできる
+                    out.append(item)
+                    continue
                 if ext != ".pdf":
                     out.append({"path": p, "name": os.path.basename(p), "fields": []})
                     continue
@@ -399,23 +417,36 @@ class Session:
                         written.append({"name": os.path.basename(dest), "path": dest, "evidenceNumber": ev})
                         continue
                     dest = rename_only_dest(final_dir, output.get("destName"), src)
+                    if is_av_path(src):
+                        self._convert_av(src, dest)
+                        written.append({"name": os.path.basename(dest), "path": dest, "evidenceNumber": ev})
+                        continue
                     clear = meta_keys_to_clear(s.get("metadataActions"))
                     if _ext(src) == ".pdf" and clear:
                         pdf_engine.stamp_evidence({
                             "srcPath": src, "destPath": dest, "evidenceNumber": None, "stamps": [],
                             "clearMetadataKeys": clear, "normalize": False,
                         })
+                    elif _ext(src) in (".jpg", ".jpeg", ".png"):
+                        # 写真の撮影日時・撮影場所（GPS）・機種などを外して写す（画質は変えない。5.4.6）
+                        clean = pdf_engine.image_bytes_without_metadata(src)
+                        if clean is None:
+                            raise ValueError("画像の情報（撮影場所など）を外せませんでした。画像が壊れていないかご確認ください")
+                        fileio.write_atomic(dest, clean)
                     else:
                         fileio.copy_atomic(src, dest)
                     written.append({"name": os.path.basename(dest), "path": dest, "evidenceNumber": ev})
                     continue
 
-                dest_path = unique_dest_path(final_dir, output.get("destName"))
                 if len(sources) == 1 and is_av_path(sources[0]["srcPath"]):
-                    fileio.copy_atomic(sources[0]["srcPath"], dest_path)  # 音声・動画は名前だけ
+                    # 音声・動画: .mp3・.mp4 にして（もともとそうなら再圧縮せず）、撮影場所などの情報を外す（v5.4.0）
+                    # 名前の拡張子は中身に合わせる（提出用ファイル名に拡張子が無くても .pdf にしない）
+                    dest_path = rename_only_dest(final_dir, output.get("destName"), sources[0]["srcPath"])
+                    self._convert_av(sources[0]["srcPath"], dest_path)
                     written.append({"name": os.path.basename(dest_path), "path": dest_path, "evidenceNumber": ev})
                     continue
 
+                dest_path = unique_dest_path(final_dir, output.get("destName"))
                 resolved = []
                 for s in sources:
                     if is_office_path(s["srcPath"]):
@@ -493,7 +524,9 @@ class Session:
             return {"written": [], "errors": [{"name": "", "message": "出力データの形式が正しくありません"}]}
         dest_dir = payload.get("destDir")
         if not self.is_allowed_output_dir(dest_dir):
-            return {"written": [], "errors": [{"name": (o or {}).get("destName") or "", "message": "選択されていない出力先です"}
+            msg = ("出力先のフォルダが見つかりません。フォルダを選び直してください"
+                   if dest_dir and not os.path.isdir(dest_dir) else "選択されていない出力先です")
+            return {"written": [], "errors": [{"name": (o or {}).get("destName") or "", "message": msg}
                                               for o in outputs]}
         final_dir = os.path.join(dest_dir, SUBFOLDER_NAME) if payload.get("makeSubfolder") else dest_dir
         try:
@@ -501,7 +534,13 @@ class Session:
         except OSError as e:
             return {"written": [], "errors": [{"name": (o or {}).get("destName") or "",
                                                "message": f"出力先フォルダを作成できません: {e}"} for o in outputs]}
-        r = self.build_outputs_into(outputs, final_dir, bool(payload.get("renameOnly")))
+        av_total = sum(1 for o in outputs if isinstance(o, dict) and isinstance(o.get("sources"), list)
+                       and o["sources"] and is_av_path((o["sources"][0] or {}).get("srcPath")))
+        self.progress = {"active": True, "avTotal": av_total, "avDone": 0, "name": "", "ratio": 0.0}
+        try:
+            r = self.build_outputs_into(outputs, final_dir, bool(payload.get("renameOnly")))
+        finally:
+            self.progress = {"active": False}
         expl = payload.get("explanation")
         if expl and expl.get("data"):
             try:
@@ -517,6 +556,23 @@ class Session:
         self.last_output_dir = final_dir
         self.cleanup_preview_dir()
         return {**r, "outputDir": final_dir, "caseFileSaved": None}
+
+    # --- 音声・動画（v5.4.0） ---
+    def _convert_av(self, src, dest):
+        name = os.path.basename(dest)
+        prog = self.progress
+        if prog.get("active"):
+            prog.update(name=name, ratio=0.0)
+
+        def on_progress(x):
+            if prog.get("active"):
+                prog["ratio"] = x
+        media.convert(src, dest, on_progress=on_progress)
+        if prog.get("active"):
+            prog["avDone"] = prog.get("avDone", 0) + 1
+
+    def get_progress(self):
+        return dict(self.progress)
 
     # --- プレビュー ---
     def generate_preview(self, payload):

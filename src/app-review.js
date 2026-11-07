@@ -7,7 +7,19 @@
 
 // Renders the parts that depend on the evidence number (merge note + stamp
 // labels). Called on render AND live as the number is edited.
+// 証拠番号の有無で出し入れする欄（番号を入れたその場で枝番欄が出るように、入力中の軽い更新でも呼ぶ）
+function renderNumberDependentFields(rf) {
+  // 証拠番号つきのファイルにだけ「この証拠を外す」導線を出す
+  $("rf-exclude-row").hidden = state.renameOnly || !rf.evidenceNumber;
+  // 枝番編集欄も証拠番号つきのファイルにだけ出す
+  // 刑事（弁/検）は枝番を使わないので枝番の編集欄も出さない
+  $("rf-branch-field").hidden = state.renameOnly || !rf.evidenceNumber || isCriminalEvidenceNum(rf.evidenceNumber);
+  // 「証拠」なのに番号が空＝証拠一覧に並ばない状態を明示し、番号入力を促す
+  $("rf-evnum-hint").hidden = state.renameOnly || !(rf.kind === "証拠" && !rf.evidenceNumber);
+}
+
 function renderEvidenceDerived(rf) {
+  renderNumberDependentFields(rf);
   // 証拠番号欄はキャレット保持のため renderReview() を通らない軽量更新パス
   // なので、「AIの値に戻す」ヒントもここで更新する（入力中に即時表示されるように）。
   renderAiOriginalHint("rf-evnum-orig", rf, "evidenceNumber", rf.evidenceNumber);
@@ -42,6 +54,9 @@ function renderEvidenceDerived(rf) {
 
   const list = $("rf-stamp-list");
   list.innerHTML = "";
+  // 音声・動画には押印できないので、押印の行（「p.1 押印なし」）は出さない
+  list.hidden = isAvName(rf.name);
+  if (list.hidden) return;
   const stamps = stampRowsOf(rf); // ページを回すために足した「回転だけ」の指示は行にしない
   if (!stamps.length) {
     if (rf.evidenceNumber) {
@@ -889,13 +904,35 @@ function prunePlaceholders() {
 // 撮影者・撮影日になる（証拠説明書の組み立て＝app-explanation.js と同じ使い分け）。
 function explanationFieldKeys(rf) {
   const capture = !!(rf.captureKind && String(rf.captureKind).trim());
-  return capture
-    ? { author: "captureBy", date: "captureDatetime", authorLabel: "撮影者", dateLabel: "撮影日（例: R7.10.16）" }
-    : { author: "author", date: "createdDate", authorLabel: "作成者", dateLabel: "作成年月日（例: R7.9.1）" };
+  if (capture) return { author: "captureBy", date: "captureDatetime", authorLabel: "撮影者", dateLabel: "撮影日（例: R7.10.16）" };
+  // 音声・動画（AI の撮影の区分が無いとき）も、欄の名前は撮影者・撮影日／録音者・録音日にする（書く先は作成者・作成年月日）
+  if (isAvName(rf.name)) {
+    return VIDEO_RE.test(rf.name)
+      ? { author: "author", date: "createdDate", authorLabel: "撮影者", dateLabel: "撮影日（例: R7.10.16）" }
+      : { author: "author", date: "createdDate", authorLabel: "録音者", dateLabel: "録音日（例: R7.10.16）" };
+  }
+  // 撮影日時の記録がある写真（AI の撮影の区分が無いとき）も、撮影者・撮影日
+  if (isPhotoName(rf.name) && rf.captureMeta && rf.captureMeta.recordedAt) {
+    return { author: "author", date: "createdDate", authorLabel: "撮影者", dateLabel: "撮影日（例: R7.10.16）" };
+  }
+  return { author: "author", date: "createdDate", authorLabel: "作成者", dateLabel: "作成年月日（例: R7.9.1）" };
+}
+// ファイルの中の日時から入れた下書きのままなら、そう知らせる（書き換えたら消す）
+function renderDateDraftNote(rf) {
+  const note = $("rf-created-draft-note");
+  const k = explanationFieldKeys(rf);
+  const isDraft = !!rf.dateDraftFromFile && String(rf[k.date] || "").trim() === rf.dateDraftFromFile;
+  note.hidden = !isDraft;
+  if (isDraft) {
+    const what = isAvName(rf.name) && !VIDEO_RE.test(rf.name) ? "録音" : "撮影";
+    note.textContent = `撮影した機器が記録した${what}日時から入れた下書きです。日時は書き換えられることもあるので、`
+      + `確かめてください（提出用のファイルからはこの情報を消します）。`;
+  }
 }
 function renderExplanationFields(rf) {
   const box = $("rf-expl-fields");
-  const show = !!rf && !state.renameOnly && !state.explanationExists && !!rf.evidenceNumber && !isAvName(rf.name);
+  // 音声・動画も証拠説明書に1行で載るので、欄を出す（5.4.3 までは出ていなかった）
+  const show = !!rf && !state.renameOnly && !state.explanationExists && !!rf.evidenceNumber;
   box.hidden = !show;
   if (!show) return;
   const k = explanationFieldKeys(rf);
@@ -903,6 +940,7 @@ function renderExplanationFields(rf) {
   $("rf-created-label").textContent = k.dateLabel;
   $("rf-author-input").value = rf[k.author] || "";
   $("rf-created-input").value = rf[k.date] || "";
+  renderDateDraftNote(rf);
   $("rf-orig-select").value = ["原本", "写し"].includes(rf.originalOrCopy) ? rf.originalOrCopy : "";
   $("rf-purpose-input").value = rf.proofPurpose || "";
 }
@@ -1059,7 +1097,10 @@ function makeEvidenceGroupBox(g, sel, visible, branchPlaceholders) {
     ].sort((a, b) => a.key - b.key);
     for (const br of branchRows) box.append(br.el);
   } else {
-    box.append(makeEvidenceRow(items[0], sel, { dragInfo: { level: "num", num: g.num } }));
+    // 枝番が1件だけ（例: 録音を「の1」にして反訳を後で足す）でも、一覧で枝番が分かるように出す
+    const b = items[0].rf.branchRange;
+    const branchLabel = b != null && b !== "" ? `${g.num}の${b}` : "";
+    box.append(makeEvidenceRow(items[0], sel, { branchLabel, dragInfo: { level: "num", num: g.num } }));
   }
   return box;
 }
@@ -1565,7 +1606,14 @@ function renderReview() {
   }
 
   const attention = needsAttention(rf);
-  $("rf-name").textContent = rf.pageRange ? `${rf.name}（${pageRangeLabel(rf)}）` : rf.name;
+  $("rf-name").textContent = rf.pageRange ? `${rf.name}（${pageRangeLabel(rf)}）`
+    // v5.4.0: .mp3・.mp4 以外の音声・動画は出力時に変換する
+    : needsAvConversion(rf.name) ? `${rf.name}（出力するときに ${outputExtFor(rf.name)} に変換します）` : rf.name;
+  // 音声・動画は出力しても PDF にならないので、札と欄の名前をそれに合わせる
+  const av = isAvName(rf.name);
+  $("rf-type-badge").textContent = av ? (VIDEO_RE.test(rf.name) ? "動画" : "音声") : "PDF";
+  $("rf-evidence-label").textContent = av ? "証拠番号" : "証拠番号・押印";
+  $("rf-meta-label").textContent = av ? "ファイルの情報" : "PDF情報";
   const badge = $("rf-badge");
   badge.textContent = attention ? "要確認" : "確認済み";
   badge.className = "pill " + (attention ? "pill-warn-solid" : "pill-ok");
@@ -1671,13 +1719,7 @@ function renderReview() {
   renderAiOriginalHint("rf-suggested-orig", rf, "suggested", rf.suggested);
   renderAiOriginalHint("rf-evnum-orig", rf, "evidenceNumber", rf.evidenceNumber);
 
-  // 証拠番号つきのファイルにだけ「この証拠を外す」導線を出す
-  $("rf-exclude-row").hidden = state.renameOnly || !rf.evidenceNumber;
-  // 枝番編集欄も証拠番号つきのファイルにだけ出す
-  // 刑事（弁/検）は枝番を使わないので枝番の編集欄も出さない
-  $("rf-branch-field").hidden = state.renameOnly || !rf.evidenceNumber || isCriminalEvidenceNum(rf.evidenceNumber);
-  // 「証拠」なのに番号が空＝証拠一覧に並ばない状態を明示し、番号入力を促す
-  $("rf-evnum-hint").hidden = state.renameOnly || !(rf.kind === "証拠" && !rf.evidenceNumber);
+  renderNumberDependentFields(rf);
 
   const metaRows = $("rf-meta-rows");
   metaRows.innerHTML = "";
@@ -1757,7 +1799,42 @@ function renderReview() {
     metaRows.appendChild(box);
   }
 
-  $("rf-delete-count").textContent = `削除 ${rf.metadata.filter((m) => m.action === "delete").length}件`;
+  // 音声・動画: 変換するときに消える情報（撮影・録音日時・撮影場所）を見せる。消すかどうかは選べない
+  // （消すのが既定の作り。元のファイルには残る）
+  let avDeleted = 0;
+  if ((isAvName(rf.name) || isPhotoName(rf.name)) && rf.captureMeta) {
+    const items = [];
+    const isAudio = isAvName(rf.name) && !VIDEO_RE.test(rf.name);
+    if (rf.captureMeta.recordedAt) items.push([isAudio ? "録音日時（機器の記録）" : "撮影日時（機器の記録）", rf.captureMeta.recordedAt.replace("T", " ")]);
+    if (rf.captureMeta.fileTime) items.push(["ファイルの作成日時", rf.captureMeta.fileTime.replace("T", " ")]);
+    if (rf.captureMeta.device) items.push(["機種", rf.captureMeta.device]);
+    if (rf.captureMeta.hasLocation) items.push(["撮影場所（位置情報）", "あり"]);
+    for (const [k, v] of items) {
+      const row = document.createElement("div");
+      row.className = "meta-row";
+      const info = document.createElement("div");
+      const key = document.createElement("div");
+      key.className = "meta-key";
+      key.textContent = k;
+      const val = document.createElement("div");
+      val.className = "meta-val";
+      val.textContent = v;
+      info.append(key, val);
+      const tag = document.createElement("span");
+      tag.className = "meta-fixed";
+      tag.textContent = "削除";
+      row.append(info, tag);
+      metaRows.appendChild(row);
+    }
+    avDeleted = items.length;
+    if (items.length) {
+      const note = document.createElement("div");
+      note.className = "office-meta-found";
+      note.textContent = "提出用のファイルからは、作成者などほかの情報とあわせて消します。元のファイルには残ります。";
+      metaRows.appendChild(note);
+    }
+  }
+  $("rf-delete-count").textContent = `削除 ${rf.metadata.filter((m) => m.action === "delete").length + avDeleted}件`;
   renderEvidenceInfo(rf);
   renderReviewProgress();
 }

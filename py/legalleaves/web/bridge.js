@@ -56,6 +56,7 @@
     openLastOutputDir: () => call("open_last_output_dir"),
     readPdfMetadata: (filePaths) => call("read_pdf_metadata", filePaths || []),
     createSubmissionFiles: (payload) => call("create_submission_files", payload),
+    getProgress: () => call("get_progress"),
     generatePreview: (payload) => call("generate_preview", payload),
     regeneratePreviewFile: (payload) => call("regenerate_preview_file", payload),
     readPreviewBytes: async (filePath) => {

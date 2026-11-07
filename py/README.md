@@ -65,8 +65,15 @@ cd py; .venv\Scripts\python -m legalleaves
 ### 配布物を作る
 
 ```powershell
+py\.venv\Scripts\python tools\fetch-ffmpeg.py   # 初回だけ: 音声・動画の変換の部品（ffmpeg）を vendor\ffmpeg に取得
 npm run dist        # 説明書PDF（Edge で印刷）→ インストーラ
 ```
+
+音声・動画の変換（v5.4.0〜）は同梱の ffmpeg（BtbN/FFmpeg-Builds の LGPL 版・DLL 分割・約150MB）を使う。
+`vendor/` はリポジトリに入れない。`tools/fetch-ffmpeg.py` が配布元の checksums.sha256 と照らして取得し、
+取得した版を `vendor/ffmpeg/VERSION.txt` に書く。ffmpeg を取り直したら、`tools/make-ffmpeg-notices.py` の
+`BTBN_COMMIT` をそのビルドの版（配布元のリリース autobuild-… のタグが指す版）に合わせて実行し、
+FFmpeg に組み込まれた部品の許諾（`py/packaging/notices/ffmpeg-libs.md`）を集め直してから、ライセンス表示も作り直す（下）。
 
 `py\build\out\LegalLeaves-Setup-<版>.exe` と、ハッシュ値の控え（`.sha256.txt`）ができる。
 版の番号は `py/legalleaves/__init__.py` の `__version__` が正（`npm version <版> --no-git-tag-version` で `package.json` もそろえる）。

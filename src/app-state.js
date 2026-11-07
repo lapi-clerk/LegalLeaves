@@ -88,8 +88,8 @@ function guessType(name) {
   if (n.includes("説明書")) return "説明";
   if (n.includes("号証") || n.includes("甲") || n.includes("乙")) return "証拠";
   if (/\.(jpe?g|png)$/i.test(n)) return "画像";
-  if (/\.mp3$/i.test(n)) return "音声";
-  if (/\.mp4$/i.test(n)) return "動画";
+  if (AUDIO_RE.test(n)) return "音声";
+  if (VIDEO_RE.test(n)) return "動画";
   if (/\.(docx?|rtf)$/i.test(n)) return "Word";
   if (/\.xlsx?$/i.test(n)) return "Excel";
   if (/\.pptx?$/i.test(n)) return "PPT";
@@ -97,13 +97,23 @@ function guessType(name) {
   return "—";
 }
 
-// Output keeps audio/video extensions (rename only); everything else -> .pdf.
+// v5.4.0: 音声・動画。.mp3・.mp4 はそのまま、ほかの形式は出力時に .mp3・.mp4 へ変換する（py/legalleaves/media.py と同じ一覧）
+const AUDIO_RE = /\.(mp3|wav|m4a|aac|flac|ogg|oga|opus|wma|aiff?|amr)$/i;
+const VIDEO_RE = /\.(mp4|mov|avi|wmv|mkv|m4v|flv|webm|3gp|3g2|mpeg|mpg|mts|m2ts|ts|vob)$/i;
+// Output: audio -> .mp3, video -> .mp4; everything else -> .pdf.
 function outputExtFor(name) {
-  const m = String(name || "").match(/\.(mp3|mp4)$/i);
-  return m ? m[0].toLowerCase() : ".pdf";
+  const n = String(name || "");
+  if (AUDIO_RE.test(n)) return ".mp3";
+  if (VIDEO_RE.test(n)) return ".mp4";
+  return ".pdf";
 }
 function isAvName(name) {
-  return /\.(mp3|mp4)$/i.test(String(name || ""));
+  const n = String(name || "");
+  return AUDIO_RE.test(n) || VIDEO_RE.test(n);
+}
+// .mp3・.mp4 以外の音声・動画（出力時に変換する）
+function needsAvConversion(name) {
+  return isAvName(name) && !/\.(mp3|mp4)$/i.test(String(name || ""));
 }
 // Submission extension. Rename-only mostly keeps the original extension, EXCEPT
 // Office/RTF: rename-only converts those to PDF (metadata removal), so
@@ -112,15 +122,16 @@ function isAvName(name) {
 function submitExtFor(name) {
   if (state.renameOnly) {
     const ext = String(name || "").match(/\.[^.]+$/)?.[0]?.toLowerCase() || "";
+    if (isAvName(name)) return outputExtFor(name); // 名前だけ整えるときも、音声・動画は .mp3・.mp4 にする
     return /^\.(docx?|xlsx?|pptx?|rtf)$/.test(ext) ? ".pdf" : ext;
   }
   return outputExtFor(name);
 }
 // Extensions the app can actually take in (matches the picker / drop filter). AI
 // entries pointing at anything else (e.g. a duplicate .wav) can't have a file here.
-const SUBMITTABLE_RE = /\.(pdf|jpe?g|png|mp3|mp4|docx?|xlsx?|pptx?|rtf)$/i;
+const SUBMITTABLE_RE = /\.(pdf|jpe?g|png|docx?|xlsx?|pptx?|rtf)$/i;
 function isSubmittableName(name) {
-  return SUBMITTABLE_RE.test(String(name || ""));
+  return SUBMITTABLE_RE.test(String(name || "")) || isAvName(name);
 }
 
 function walkEntry(entry, out) {
@@ -182,7 +193,25 @@ function mergeMetaResult(f, r) {
     activeContent: r.activeContent || null, // 能動的コンテンツ（検出のみ）
     overA3: r.overA3 || null,           // A3を超えるページの寸法
     pageCount: r.pageCount || null,     // PDFのページ数（ページ範囲で枝番に分けるときに使う）
+    captureMeta: r.captureMeta || null, // 写真・音声・動画の撮影・録音日時（機器の記録）と撮影場所の有無（消す前に読む）
   };
+}
+
+// "2025-11-18T01:12" → "R7.11.18"（証拠説明書の作成年月日と同じ半角の和暦）。読めなければ ""。
+// 令和は 2019-05-01 から。それより前は平成（H31.4.30 まで）。
+// 写真（.jpg・.png）か。撮影日の下書き・欄の名前に使う
+function isPhotoName(name) {
+  return /\.(jpe?g|png)$/i.test(String(name || ""));
+}
+function toWarekiShort(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
+  if (!m) return "";
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (!y || mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+  const key = y * 10000 + mo * 100 + d;
+  if (key >= 20190501) return `R${y - 2018}.${mo}.${d}`;
+  if (key >= 19890108) return `H${y - 1988}.${mo}.${d}`;
+  return "";
 }
 
 async function addFiles(items) {

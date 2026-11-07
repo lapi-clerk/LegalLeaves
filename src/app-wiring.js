@@ -406,7 +406,7 @@ bindExplField("rf-author-input", (rf, v) => {
   rf[explanationFieldKeys(rf).author] = v;
   if (!rf.captureKind) { rf.authorDecided = true; rf.authorSource = "primary"; } // 手で入れた作成者を正とする
 });
-bindExplField("rf-created-input", (rf, v) => { rf[explanationFieldKeys(rf).date] = v; });
+bindExplField("rf-created-input", (rf, v) => { rf[explanationFieldKeys(rf).date] = v; renderDateDraftNote(rf); });
 bindExplField("rf-purpose-input", (rf, v) => { rf.proofPurpose = v; });
 $("rf-orig-select").addEventListener("change", (e) => {
   const rf = state.reviewFiles[state.selectedReview];

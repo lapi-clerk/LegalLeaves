@@ -77,6 +77,27 @@ function buildCaseFile() {
   };
 }
 
+// 書き出しの間、音声・動画の変換の進み具合を問い合わせて表示する。止める関数を返す。
+function watchAvProgress(outputs, show) {
+  const hasAv = (outputs || []).some((o) => (o.sources || []).some((s) => isAvName(s.srcPath)));
+  if (!hasAv || !window.api.getProgress) return () => {};
+  let stopped = false;
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      const p = await window.api.getProgress();
+      if (!stopped && p && p.active && p.avTotal) {
+        const n = Math.min(p.avTotal, (p.avDone || 0) + 1);
+        const pct = Math.round((p.ratio || 0) * 100);
+        show(`音声・動画を変換中 ${n}/${p.avTotal}（${pct}%）`);
+      }
+    } catch (_) { /* 問い合わせに失敗しても書き出しは続ける */ }
+    if (!stopped) timer = setTimeout(tick, 500);
+  };
+  let timer = setTimeout(tick, 300);
+  return () => { stopped = true; clearTimeout(timer); };
+}
+
 async function commitOutputs(outputs) {
   const btn = $("export-next-btn");
   const commitBtn = $("preview-commit-btn");
@@ -85,6 +106,8 @@ async function commitOutputs(outputs) {
   const original = btn.textContent;
   btn.textContent = "作成中...";
   commitBtn.textContent = "書き出し中...";
+  // v5.4.0: 音声・動画の変換は時間がかかるので、書き出しの間は進み具合を出す
+  const stopProgress = watchAvProgress(outputs, (text) => { btn.textContent = text; commitBtn.textContent = text; });
   try {
     const explanation = state.generateExplanation && !state.renameOnly && !state.explanationExists && hasEvidenceFiles()
       ? { data: buildExplanationData(), destName: explanationFileName() }
@@ -104,6 +127,7 @@ async function commitOutputs(outputs) {
     closePreviewModal();
     advanceStep("done");
   } finally {
+    stopProgress();
     btn.disabled = false;
     btn.textContent = original;
     commitBtn.disabled = false;

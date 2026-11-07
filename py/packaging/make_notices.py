@@ -52,6 +52,8 @@ HEADER = """# サードパーティライセンス表示（THIRD-PARTY NOTICES�
 - 実行ファイルの起動部分は PyInstaller のブートローダーです。PyInstaller は GPL 2.0 ですが、
   ブートローダーには「これを使って作った実行ファイルは任意のライセンスで配布してよい」という例外が付いています
   （https://pyinstaller.org/en/stable/license.html ）。
+- 音声・動画の変換には **FFmpeg**（LGPL v3・DLL 分割）を同梱しています。版・入手元・ソースの辿り方・許諾の全文は
+  「FFmpeg」の項にまとめています。
 - Python 本体（`python313.dll` ほか）と、Python に同梱される部品（OpenSSL・libffi・zlib・bzip2・xz・expat など）の
   表示は、末尾の「Python」の項にまとめています。
 """
@@ -123,12 +125,30 @@ def read(name):
         return f.read().strip() + "\n"
 
 
+def ffmpeg_section():
+    """FFmpeg（vendor/ffmpeg・tools/fetch-ffmpeg.py で取得）の表示。版・構成・LGPL v3 の全文。"""
+    d = os.path.join(ROOT, "vendor", "ffmpeg")
+    ver_path = os.path.join(d, "VERSION.txt")
+    lic_path = os.path.join(d, "LICENSE.txt")
+    if not (os.path.isfile(ver_path) and os.path.isfile(lic_path)):
+        raise SystemExit("vendor/ffmpeg がありません。先に tools/fetch-ffmpeg.py を実行してください。")
+    ver = open(ver_path, encoding="utf-8").read().strip()
+    lic = open(lic_path, encoding="utf-8", errors="replace").read().strip()
+    # 組み込まれている部品（LAME・OpenH264 など）の許諾は tools/make-ffmpeg-notices.py が notices/ffmpeg-libs.md に集める
+    if not os.path.isfile(os.path.join(HERE, "notices", "ffmpeg-libs.md")):
+        raise SystemExit("notices/ffmpeg-libs.md がありません。先に tools/make-ffmpeg-notices.py を実行してください。")
+    return "\n".join([read("ffmpeg-head.md").rstrip(), "", "### 版と構成（ffmpeg -version）", "", "```", ver, "```", "",
+                      "### GNU Lesser General Public License version 3", "", "```", lic, "```", "",
+                      read("ffmpeg-libs.md")])
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parts = [HEADER]
     for name, role in PACKAGES:
         parts += ["---", "", section(name, role)]
-    parts += ["---", "", read("pdfjs.md"), "", "---", "", python_section(), "---", "", read("fonts-tail.md")]
+    parts += ["---", "", read("pdfjs.md"), "", "---", "", ffmpeg_section(), "---", "", python_section(), "---", "",
+              read("fonts-tail.md")]
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(parts))
     print("作成:", OUT)
