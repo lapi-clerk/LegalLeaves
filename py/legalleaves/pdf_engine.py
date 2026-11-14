@@ -38,11 +38,17 @@ from . import fileio
 from .paths import resource_path
 
 # --- 裁判所タイムスタンプ帯と番号の既定位置（src/timestamp-zone.js と同じ値） ---
+# 横向きの紙では、帯は右端に縦向きに付く（src/timestamp-zone.js の【A4横】）。ここの値は縦の紙の形のままで、
+# 番号を押す位置は、横向きの紙でも変えていない（既定の位置は帯と重ならない）。
+# 写真を置く位置は、横向きの紙では右の余白を広げて、帯を避ける（IMG_LANDSCAPE_RIGHT_MARGIN_PT）。
 STAMP_SAFE_Y = 0.07                      # 上端アンカーの既定 y（帯の直下・A4縦で上端20.8mm）
 A4_PT = (595.28, 841.89)
 IMG_NUMBER_TOP_PT = STAMP_SAFE_Y * A4_PT[1]  # 画像の番号ボックス上端 ≈58.9pt
 
 ANCHORS = {"top-left", "top-right", "bottom-left", "bottom-right", "center"}
+# 横向きの紙に置く写真の、右の余白。帯（右端から 8〜19mm）の内側に約 3mm のすき間を取る ≈22mm。
+# 画面の見本（src/app-review.js の IMG_PAGE_LANDSCAPE_RIGHT_PT）と同じ値にすること。
+IMG_LANDSCAPE_RIGHT_MARGIN_PT = 62
 DEFAULT_POSITION = {"x": 0.93, "y": STAMP_SAFE_Y, "anchor": "top-right"}
 DEFAULT_COLOR = (0.78, 0.0, 0.0)  # #C80000 寄りの朱色 — 証拠番号の慣例
 DEFAULT_FONT_SIZE = 18
@@ -385,12 +391,14 @@ def _image_page_pdf(src_path, page_size=None, margin_pt=None, rotate=0):
     ph = w0 if landscape else h0
     margin = 34 if margin_pt is None else margin_pt
     top_band = 80  # 番号用に上端へ空ける白帯（ラベルの下に約1cmのすき間）
-    avail_w = pw - margin * 2
+    # 横向きの紙では、提出後のタイムスタンプ帯が右端に付くので、右の余白を広げて写真を帯の内側に収める
+    right = max(margin, IMG_LANDSCAPE_RIGHT_MARGIN_PT) if landscape else margin
+    avail_w = pw - margin - right
     avail_h = ph - margin - top_band
     scale = min(avail_w / rw, avail_h / rh)
     dw, dh = rw * scale, rh * scale
     sw, sh = iw * scale, ih * scale
-    lx = (pw - dw) / 2
+    lx = margin + (avail_w - dw) / 2
     by = margin + (avail_h - dh) / 2
     if rot == 90:
         ax, ay = lx + dw, by

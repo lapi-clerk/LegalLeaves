@@ -1122,6 +1122,22 @@ html, body { height: 100%; }
 /* 照合を飛ばして確認画面へ来たときの案内 */
 .match-skip-note { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }
 .match-skip-note[hidden] { display: none; }
+/* 右クリックのメニュー（コピー・貼り付け） */
+.ctx-menu {
+  position: fixed; z-index: 10000; min-width: 120px; padding: 4px;
+  background: #fff; border: 1px solid #b9c2cf; border-radius: 8px; /* 影は使わない（デザイン指針）。枠の色で浮かせる */
+}
+.ctx-menu-item {
+  display: block; width: 100%; padding: 7px 14px; border: 0; background: none;
+  font: inherit; font-size: 13.5px; color: var(--text); text-align: left; border-radius: 5px; cursor: pointer;
+}
+.ctx-menu-item:hover, .ctx-menu-item:focus-visible { background: var(--accent-soft); outline: none; }
+/* 外から開いたとき（--open）の知らせ。人が自分で入れたものと取り違えないよう、どの画面でも出す */
+.outside-open-note {
+  margin: 0 0 12px; padding: 9px 13px; font-size: 13px; line-height: 1.6;
+  color: var(--text); background: var(--warn-bg); border-radius: 8px;
+}
+.outside-open-note[hidden] { display: none; }
 
 /* Phase2: 証拠の割り込み挿入コントロール（一覧の下） */
 .insert-bar { margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; background: #f6f8fb; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
@@ -1638,6 +1654,7 @@ select, .text-input {
   font-size: 11px; color: #a3540a; background: rgba(255, 255, 255, .65);
   padding: 1px 7px; border-radius: 6px; white-space: nowrap;
 }
+.pv-zone.is-landscape .pv-zone-label { writing-mode: vertical-rl; padding: 7px 1px; }
 .preview-controls {
   display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap;
   padding: 10px 18px; border-top: 1px solid var(--line); background: #f6f8fb;

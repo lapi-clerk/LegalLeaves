@@ -1,0 +1,2592 @@
+{
+  "title": "表記と番号の読み取り（全角・半角、号証番号、枝番、ファイル名）",
+  "kind": "function",
+  "no_wave_dash": [
+    "toHalfWidthFilenamePart",
+    "suggestedForTitle",
+    "mergeDestName",
+    "outputDestName",
+    "numberPrefix",
+    "explanationEvidenceLabel",
+    "explanationBaseName",
+    "evidenceRangeLabel",
+    "fixWaveDash",
+    "toFullWidth",
+    "toHalfWidth"
+  ],
+  "cases": [
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "abc XYZ 012"
+      ],
+      "expect": "ａｂｃ　ＸＹＺ　０１２"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "株式会社Alpha(東京)"
+      ],
+      "expect": "株式会社Ａｌｐｈａ（東京）"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "山田 太郎"
+      ],
+      "expect": "山田　太郎"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "令和6年(ワ)第123号"
+      ],
+      "expect": "令和６年（ワ）第１２３号"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "すでに全角ＡＢＣ１２３（）　"
+      ],
+      "expect": "すでに全角ＡＢＣ１２３（）　"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "a-b_c.d/e"
+      ],
+      "expect": "ａ-ｂ_ｃ.ｄ/ｅ"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        ""
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        123
+      ],
+      "expect": "１２３"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "1\uff5e3"
+      ],
+      "expect": "１\uff5e３"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "1\u301c3"
+      ],
+      "expect": "１\uff5e３"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "1~3"
+      ],
+      "expect": "１~３"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        "Ｒ６．４．１２"
+      ],
+      "expect": "R6.4.12"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        "ＡＢＣａｂｃ０１２"
+      ],
+      "expect": "ABCabc012"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        "（全角かっこ）　全角スペース"
+      ],
+      "expect": "（全角かっこ）　全角スペース"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        "R6.4.12"
+      ],
+      "expect": "R6.4.12"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "甲００１＿契約書（原本）"
+      ],
+      "expect": "甲001_契約書(原本)"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "ＬＩＮＥトーク画面　２０２４"
+      ],
+      "expect": "LINEトーク画面 2024"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "甲001_契約書"
+      ],
+      "expect": "甲001_契約書"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "１\uff5e３"
+      ],
+      "expect": "1\uff5e3"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "１\u301c３"
+      ],
+      "expect": "1\uff5e3"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "Ｒ６．４．１２"
+      ],
+      "expect": "R6．4．12"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲001"
+      ],
+      "expect": {
+        "sym": "甲",
+        "num": 1
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲1"
+      ],
+      "expect": {
+        "sym": "甲",
+        "num": 1
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "乙012"
+      ],
+      "expect": {
+        "sym": "乙",
+        "num": 12
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲A003"
+      ],
+      "expect": {
+        "sym": "甲A",
+        "num": 3
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        " 甲001 "
+      ],
+      "expect": {
+        "sym": "甲",
+        "num": 1
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲000"
+      ],
+      "expect": {
+        "sym": "甲",
+        "num": 0
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲1000"
+      ],
+      "expect": {
+        "sym": "甲",
+        "num": 1000
+      }
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "001"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲００１"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        "甲001-1"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        ""
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceNumber",
+      "args": [
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "padEvidence",
+      "args": [
+        "甲",
+        1
+      ],
+      "expect": "甲001"
+    },
+    {
+      "fn": "padEvidence",
+      "args": [
+        "乙",
+        41
+      ],
+      "expect": "乙041"
+    },
+    {
+      "fn": "padEvidence",
+      "args": [
+        "甲A",
+        123
+      ],
+      "expect": "甲A123"
+    },
+    {
+      "fn": "padEvidence",
+      "args": [
+        "甲",
+        1000
+      ],
+      "expect": "甲1000"
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        "甲001"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        "甲000"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        "甲0"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        "甲"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        ""
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isValidEvidenceNumber",
+      "args": [
+        null
+      ],
+      "expect": false
+    },
+    {
+      "fn": "shortNumberLabel",
+      "args": [
+        "甲001"
+      ],
+      "expect": "甲1"
+    },
+    {
+      "fn": "shortNumberLabel",
+      "args": [
+        "甲A012"
+      ],
+      "expect": "甲A12"
+    },
+    {
+      "fn": "shortNumberLabel",
+      "args": [
+        "読めない"
+      ],
+      "expect": "読めない"
+    },
+    {
+      "fn": "shortNumberLabel",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "弁003"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "検002"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "甲003"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "乙001"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "甲A003"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        "弁"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isCriminalEvidenceNum",
+      "args": [
+        ""
+      ],
+      "expect": false
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": false,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲003"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": false,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3-1"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3の1"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3－1"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3/1"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3-"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲A3-1"
+      ],
+      "expect": {
+        "num": "甲A003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲 3 - 01"
+      ],
+      "expect": {
+        "num": "甲003",
+        "hasBranch": true,
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "弁3-1"
+      ],
+      "expect": {
+        "num": "弁003",
+        "hasBranch": false,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "検2の3"
+      ],
+      "expect": {
+        "num": "検002",
+        "hasBranch": false,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲0"
+      ],
+      "expect": {
+        "num": "甲000",
+        "hasBranch": false,
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "3"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲３"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        "甲3-1-2"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        ""
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceInput",
+      "args": [
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲3の1.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": "1"
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "乙12-2 LINE.pdf"
+      ],
+      "expect": {
+        "num": "乙012",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲００５・写真.jpg"
+      ],
+      "expect": {
+        "num": "甲005",
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲A3_図面.pdf"
+      ],
+      "expect": {
+        "num": "甲A003",
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲001_2_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "弁3-1.pdf"
+      ],
+      "expect": {
+        "num": "弁003",
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "検2-3.pdf"
+      ],
+      "expect": {
+        "num": "検002",
+        "branch": null
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "準備書面.pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "報告書3.pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "証拠説明書(甲001\uff5e甲003).pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲.pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "scan001.pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "丙10／2.png"
+      ],
+      "expect": {
+        "num": "丙010",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1の2_領収書.pdf"
+      ],
+      "expect": "領収書"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "乙12-2 LINE.pdf"
+      ],
+      "expect": "LINE"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲００５・写真.jpg"
+      ],
+      "expect": "写真"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲A3_図面.pdf"
+      ],
+      "expect": "図面"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲3.pdf"
+      ],
+      "expect": "甲3"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "準備書面.pdf"
+      ],
+      "expect": "準備書面"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲001＿契約書（原本）.pdf"
+      ],
+      "expect": "契約書（原本）"
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "拡張子なし"
+      ],
+      "expect": "拡張子なし"
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲003_2_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": "2",
+        "length": 7
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲3の2_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": "2",
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲3-2 領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": "2",
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲003_2024年契約書.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": null,
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲003_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": null,
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲003.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": null,
+        "length": 4
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲003_1\uff5e2_写真.pdf"
+      ],
+      "expect": {
+        "num": "甲003",
+        "branch": null,
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "甲000_写真.pdf"
+      ],
+      "expect": {
+        "num": "甲000",
+        "branch": null,
+        "length": 5
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "弁003_1_供述調書.pdf"
+      ],
+      "expect": {
+        "num": "弁003",
+        "branch": null,
+        "length": 7
+      }
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        "領収書.pdf"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        ""
+      ],
+      "expect": null
+    },
+    {
+      "fn": "numberFromSuggested",
+      "args": [
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲003",
+        null
+      ],
+      "expect": "甲003"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲003",
+        "2"
+      ],
+      "expect": "甲003_2"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲003",
+        "１\uff5e２"
+      ],
+      "expect": "甲003_1\uff5e2"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲003",
+        " 2 "
+      ],
+      "expect": "甲003_2"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "",
+        "2"
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        null,
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "甲001",
+        null
+      ],
+      "expect": "甲第1号証"
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "乙012",
+        "2"
+      ],
+      "expect": "乙第12号証の2"
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "甲001",
+        "1\uff5e3"
+      ],
+      "expect": "甲第1号証の1\uff5e3"
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "甲A003",
+        null
+      ],
+      "expect": "甲A第3号証"
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "甲001",
+        ""
+      ],
+      "expect": "甲第1号証"
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        "読めない",
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "deriveStampLabel",
+      "args": [
+        null,
+        null
+      ],
+      "expect": null
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "乙041",
+        "1"
+      ],
+      "expect": "乙041-1"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲005",
+        null
+      ],
+      "expect": "甲005"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲5",
+        "２"
+      ],
+      "expect": "甲005-2"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲A3",
+        "1"
+      ],
+      "expect": "甲A003-1"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲005",
+        "1\uff5e2"
+      ],
+      "expect": "甲005-1\uff5e2"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲005",
+        "1\u301c2"
+      ],
+      "expect": "甲005-1\uff5e2"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "読めない",
+        null
+      ],
+      "expect": "読めない"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        null,
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        "1"
+      ],
+      "expect": 1
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        "1\uff5e2"
+      ],
+      "expect": 1
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        "２"
+      ],
+      "expect": 2
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        "12"
+      ],
+      "expect": 12
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        null
+      ],
+      "expect": 0
+    },
+    {
+      "fn": "branchSortKey",
+      "args": [
+        "枝"
+      ],
+      "expect": 0
+    },
+    {
+      "fn": "normKey",
+      "args": [
+        "甲 42　契約書.PDF"
+      ],
+      "expect": "甲42契約書.pdf"
+    },
+    {
+      "fn": "normKey",
+      "args": [
+        "甲４２契約書.pdf"
+      ],
+      "expect": "甲42契約書.pdf"
+    },
+    {
+      "fn": "normKey",
+      "args": [
+        "ｶﾀｶﾅ（半角）.pdf"
+      ],
+      "expect": "カタカナ(半角).pdf"
+    },
+    {
+      "fn": "normKey",
+      "args": [
+        "1\uff5e3.pdf"
+      ],
+      "expect": "1~3.pdf"
+    },
+    {
+      "fn": "normKey",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "normKeyNoExt",
+      "args": [
+        "写真 01.JPG"
+      ],
+      "expect": "写真01"
+    },
+    {
+      "fn": "normKeyNoExt",
+      "args": [
+        "写真01.png"
+      ],
+      "expect": "写真01"
+    },
+    {
+      "fn": "normKeyNoExt",
+      "args": [
+        "v1.2.報告書.pdf"
+      ],
+      "expect": "v1.2.報告書"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2025-11-18T01:12"
+      ],
+      "expect": "R7.11.18"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2019-05-01T00:00"
+      ],
+      "expect": "R1.5.1"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2019-04-30T23:59"
+      ],
+      "expect": "H31.4.30"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "1989-01-08"
+      ],
+      "expect": "H1.1.8"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "1989-01-07"
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2010-02-03T10:00"
+      ],
+      "expect": "H22.2.3"
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2025-13-01"
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        "2025/11/18"
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        ""
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "toWarekiShort",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "outputExtFor",
+      "args": [
+        "録音.wav"
+      ],
+      "expect": ".mp3"
+    },
+    {
+      "fn": "outputExtFor",
+      "args": [
+        "動画.MOV"
+      ],
+      "expect": ".mp4"
+    },
+    {
+      "fn": "outputExtFor",
+      "args": [
+        "契約書.docx"
+      ],
+      "expect": ".pdf"
+    },
+    {
+      "fn": "outputExtFor",
+      "args": [
+        "写真.jpg"
+      ],
+      "expect": ".pdf"
+    },
+    {
+      "fn": "isAvName",
+      "args": [
+        "録音.m4a"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isAvName",
+      "args": [
+        "動画.mp4"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isAvName",
+      "args": [
+        "契約書.pdf"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "needsAvConversion",
+      "args": [
+        "録音.mp3"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "needsAvConversion",
+      "args": [
+        "録音.wav"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isPhotoName",
+      "args": [
+        "写真.JPEG"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isPhotoName",
+      "args": [
+        "図.pdf"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isSubmittableName",
+      "args": [
+        "表.xlsx"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isSubmittableName",
+      "args": [
+        "メモ.txt"
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isSubmittableName",
+      "args": [
+        "録音.flac"
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isSubmittableName",
+      "args": [
+        null
+      ],
+      "expect": false
+    },
+    {
+      "fn": "submitExtFor",
+      "args": [
+        "訴状.docx"
+      ],
+      "expect": ".pdf"
+    },
+    {
+      "fn": "submitExtFor",
+      "args": [
+        "訴状.docx"
+      ],
+      "state": {
+        "renameOnly": true
+      },
+      "expect": ".pdf"
+    },
+    {
+      "fn": "submitExtFor",
+      "args": [
+        "写真.JPG"
+      ],
+      "state": {
+        "renameOnly": true
+      },
+      "expect": ".jpg"
+    },
+    {
+      "fn": "submitExtFor",
+      "args": [
+        "録音.wav"
+      ],
+      "state": {
+        "renameOnly": true
+      },
+      "expect": ".mp3"
+    },
+    {
+      "fn": "submitExtFor",
+      "args": [
+        "拡張子なし"
+      ],
+      "state": {
+        "renameOnly": true
+      },
+      "expect": ""
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": "甲003",
+          "branchRange": null
+        },
+        "契約書（原本）"
+      ],
+      "expect": "甲003_契約書(原本).pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": "甲003",
+          "branchRange": "2"
+        },
+        "領収書"
+      ],
+      "expect": "甲003_2_領収書.pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": "甲003",
+          "branchRange": "1\uff5e2"
+        },
+        "ＬＩＮＥ　画面"
+      ],
+      "expect": "甲003_1\uff5e2_LINE 画面.pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": "甲003",
+          "branchRange": "1\u301c2"
+        },
+        "写真"
+      ],
+      "expect": "甲003_1\uff5e2_写真.pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": null,
+          "branchRange": null
+        },
+        "準備書面"
+      ],
+      "expect": "準備書面.pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "scan.pdf",
+          "evidenceNumber": "甲003",
+          "branchRange": null
+        },
+        ""
+      ],
+      "expect": "scan.pdf"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "録音.wav",
+          "evidenceNumber": "甲004",
+          "branchRange": null
+        },
+        "通話の録音"
+      ],
+      "expect": "甲004_通話の録音.mp3"
+    },
+    {
+      "fn": "suggestedForTitle",
+      "args": [
+        {
+          "name": "訴状.docx",
+          "evidenceNumber": null,
+          "branchRange": null
+        },
+        "訴状"
+      ],
+      "state": {
+        "renameOnly": true
+      },
+      "expect": "訴状.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "乙041",
+        [
+          {
+            "branchRange": "1",
+            "docName": "ＬＩＮＥトーク画面"
+          },
+          {
+            "branchRange": "2",
+            "docName": "別"
+          }
+        ]
+      ],
+      "expect": "乙041_1\uff5e2_LINEトーク画面.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1",
+            "docName": "領収書"
+          }
+        ]
+      ],
+      "expect": "甲003_1_領収書.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": null,
+            "docName": "契約書"
+          }
+        ]
+      ],
+      "expect": "甲003_契約書.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": null,
+            "docName": ""
+          }
+        ]
+      ],
+      "expect": "甲003.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1\uff5e2",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "3",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e3_写真.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲002",
+        [
+          {
+            "suggested": "甲002_請求書（再発行）.pdf",
+            "branchRange": null,
+            "docName": "請求書"
+          }
+        ]
+      ],
+      "expect": "甲002_請求書（再発行）.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲002",
+        [
+          {
+            "suggested": "甲002_請求書",
+            "branchRange": null,
+            "docName": "請求書"
+          }
+        ]
+      ],
+      "expect": "甲002_請求書.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲002",
+        [
+          {
+            "suggested": "甲002_写真.jpg",
+            "branchRange": null,
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲002_写真.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲002",
+        [
+          {
+            "suggested": "  ",
+            "branchRange": null,
+            "docName": "請求書"
+          }
+        ]
+      ],
+      "expect": "甲002_請求書.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲002",
+        [
+          {
+            "suggested": "a.pdf",
+            "branchRange": "1",
+            "docName": "請求書"
+          },
+          {
+            "suggested": "b.pdf",
+            "branchRange": "2",
+            "docName": "領収書"
+          }
+        ]
+      ],
+      "expect": "甲002_1\uff5e2_請求書.pdf"
+    },
+    {
+      "fn": "explanationBaseName",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "甲003"
+          }
+        ]
+      ],
+      "expect": "証拠説明書(甲001\uff5e甲003)"
+    },
+    {
+      "fn": "explanationBaseName",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲002"
+          }
+        ]
+      ],
+      "expect": "証拠説明書(甲002)"
+    },
+    {
+      "fn": "explanationBaseName",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "乙002"
+          },
+          {
+            "evidenceNumber": "乙005"
+          }
+        ]
+      ],
+      "expect": "証拠説明書(甲001・乙002\uff5e乙005)"
+    },
+    {
+      "fn": "explanationBaseName",
+      "args": [
+        [
+          {
+            "evidenceNumber": null
+          }
+        ]
+      ],
+      "expect": "証拠説明書"
+    },
+    {
+      "fn": "explanationBaseName",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲002"
+          }
+        ]
+      ],
+      "state": {
+        "placeholders": [
+          {
+            "num": "甲005",
+            "branch": null
+          }
+        ]
+      },
+      "expect": "証拠説明書(甲002\uff5e甲005)"
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-3, 4-5",
+        5
+      ],
+      "expect": {
+        "ranges": [
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "１\u301c３、４\uff5e５",
+        5
+      ],
+      "expect": {
+        "ranges": [
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-2, 3, 4-5",
+        5
+      ],
+      "expect": {
+        "ranges": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-3, 4-9",
+        null
+      ],
+      "expect": {
+        "ranges": [
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            9
+          ]
+        ]
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-5",
+        5
+      ],
+      "expect": {
+        "error": "2つ以上に分けてください（例: 1-3, 4-5）。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "2-3, 4-5",
+        5
+      ],
+      "expect": {
+        "error": "1ページ目から始めてください。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-2, 4-5",
+        5
+      ],
+      "expect": {
+        "error": "2ページ目の次は3ページ目から始めてください（抜けや重なりがあります）。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-3, 3-5",
+        5
+      ],
+      "expect": {
+        "error": "3ページ目の次は4ページ目から始めてください（抜けや重なりがあります）。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-2, 3-4",
+        5
+      ],
+      "expect": {
+        "error": "このPDFは全5ページです。最後の枝番は5ページ目まで含めてください。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-3, 4-6",
+        5
+      ],
+      "expect": {
+        "error": "このPDFは全5ページです。5ページ目より後ろは指定できません。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "3-1, 4-5",
+        5
+      ],
+      "expect": {
+        "error": "「3-1」は、ページの範囲として正しくありません。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "1-3, あ",
+        5
+      ],
+      "expect": {
+        "error": "「あ」をページの範囲として読めません（例: 1-3）。"
+      }
+    },
+    {
+      "fn": "parsePageRanges",
+      "args": [
+        "",
+        5
+      ],
+      "expect": {
+        "error": "ページの範囲を入力してください（例: 1-3, 4-5）。"
+      }
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": true,
+          "rotate_degrees": 0
+        }
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": false,
+          "rotate_degrees": 0
+        }
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": false,
+          "rotate_degrees": 90
+        }
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": false,
+          "rotate_degrees": 360
+        }
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": false,
+          "rotate_degrees": 44
+        }
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1,
+          "draw_label": false,
+          "rotate_degrees": -90
+        }
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        {
+          "page": 1
+        }
+      ],
+      "expect": true
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        null
+      ],
+      "expect": false
+    },
+    {
+      "fn": "isMeaningfulStamp",
+      "args": [
+        42
+      ],
+      "expect": false
+    },
+    {
+      "fn": "cleanConfirmText",
+      "args": [
+        "番号が既に押されています（draw_label: false）。ご確認ください。"
+      ],
+      "expect": "番号が既に押されています。ご確認ください。"
+    },
+    {
+      "fn": "cleanConfirmText",
+      "args": [
+        "枝番の対応を確認してください。draw_label を false にしました。原本かどうかも確認してください。"
+      ],
+      "expect": "枝番の対応を確認してください。原本かどうかも確認してください。"
+    },
+    {
+      "fn": "cleanConfirmText",
+      "args": [
+        "作成者が　　読み取れません"
+      ],
+      "expect": "作成者が 読み取れません"
+    },
+    {
+      "fn": "cleanConfirmText",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "listForMessage",
+      "args": [
+        [
+          "甲001",
+          "甲002"
+        ]
+      ],
+      "expect": "甲001、甲002"
+    },
+    {
+      "fn": "listForMessage",
+      "args": [
+        [
+          "甲001",
+          "甲002",
+          "甲003"
+        ],
+        2
+      ],
+      "expect": "甲001、甲002 …ほか1件"
+    },
+    {
+      "fn": "listForMessage",
+      "args": [
+        []
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲001_2.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲001_2.pdf"
+      ],
+      "expect": "甲001_2"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲001_02_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲001_02_領収書.pdf"
+      ],
+      "expect": "領収書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲001＿2＿領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲001＿2＿領収書.pdf"
+      ],
+      "expect": "領収書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲001_2-領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲001_2-領収書.pdf"
+      ],
+      "expect": "領収書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_2024_契約書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_2024_契約書.pdf"
+      ],
+      "expect": "2024_契約書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_20240412_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_20240412_領収書.pdf"
+      ],
+      "expect": "20240412_領収書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_2024年契約書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_2024年契約書.pdf"
+      ],
+      "expect": "2024年契約書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_2通目.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_2通目.pdf"
+      ],
+      "expect": "2通目"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_123_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_123_資料.pdf"
+      ],
+      "expect": "123_資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "弁003_2_供述調書.pdf"
+      ],
+      "expect": {
+        "num": "弁003",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "弁003_2_供述調書.pdf"
+      ],
+      "expect": "供述調書"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1の2_3_領収書.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "2"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1の2_3_領収書.pdf"
+      ],
+      "expect": "3_領収書"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "2",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "3",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e3_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1\uff5e3",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "2",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e3_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "1",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "１",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "３",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e3_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "1\u301c2",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "3",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e3_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "前",
+            "docName": "写真"
+          },
+          {
+            "branchRange": "後",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_前\uff5e後_写真.pdf"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": null,
+            "docName": "写真"
+          },
+          {
+            "branchRange": "2",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_2_写真.pdf"
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        "1\u301c2"
+      ],
+      "expect": "1\uff5e2"
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        "1\uff5e2"
+      ],
+      "expect": "1\uff5e2"
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        "\u301c\u301c"
+      ],
+      "expect": "\uff5e\uff5e"
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        "1~2"
+      ],
+      "expect": "1~2"
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        null
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        ""
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "fixWaveDash",
+      "args": [
+        12
+      ],
+      "expect": "12"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲005",
+        "1\u301c2"
+      ],
+      "expect": "甲005_1\uff5e2"
+    },
+    {
+      "fn": "numberPrefix",
+      "args": [
+        "甲005",
+        "１\u301c３"
+      ],
+      "expect": "甲005_1\uff5e3"
+    },
+    {
+      "fn": "explanationEvidenceLabel",
+      "args": [
+        "甲005",
+        "１\u301c３"
+      ],
+      "expect": "甲005-1\uff5e3"
+    },
+    {
+      "fn": "toHalfWidthFilenamePart",
+      "args": [
+        "甲005_1\u301c2_写真（\u301c）"
+      ],
+      "expect": "甲005_1\uff5e2_写真(\uff5e)"
+    },
+    {
+      "fn": "mergeDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "branchRange": "前",
+            "docName": "Ａ\u301cＢ"
+          },
+          {
+            "branchRange": "後\u301c",
+            "docName": "x"
+          }
+        ]
+      ],
+      "expect": "甲003_前\uff5e後\uff5e_A\uff5eB.pdf"
+    },
+    {
+      "fn": "outputDestName",
+      "args": [
+        "甲003",
+        [
+          {
+            "suggested": "甲003_1\u301c2_写真.pdf",
+            "branchRange": "1\u301c2",
+            "docName": "写真"
+          }
+        ]
+      ],
+      "expect": "甲003_1\uff5e2_写真.pdf"
+    },
+    {
+      "fn": "toFullWidth",
+      "args": [
+        "R6.4.1\u301cR6.4.3 (写し)"
+      ],
+      "expect": "Ｒ６.４.１\uff5eＲ６.４.３　（写し）"
+    },
+    {
+      "fn": "toHalfWidth",
+      "args": [
+        "Ｒ６．４．１\u301cＲ６．４．３"
+      ],
+      "expect": "R6.4.1\uff5eR6.4.3"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_99_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "99"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_99_資料.pdf"
+      ],
+      "expect": "資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_100_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_100_資料.pdf"
+      ],
+      "expect": "100_資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_012_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "12"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_012_資料.pdf"
+      ],
+      "expect": "資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1_0123_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": null
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1_0123_資料.pdf"
+      ],
+      "expect": "0123_資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1の123_資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "123"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1の123_資料.pdf"
+      ],
+      "expect": "資料"
+    },
+    {
+      "fn": "parseEvidenceFromFilename",
+      "args": [
+        "甲1-123 資料.pdf"
+      ],
+      "expect": {
+        "num": "甲001",
+        "branch": "123"
+      }
+    },
+    {
+      "fn": "titleFromFilename",
+      "args": [
+        "甲1-123 資料.pdf"
+      ],
+      "expect": "資料"
+    }
+  ]
+}

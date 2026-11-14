@@ -29,11 +29,13 @@ function buildExplanationData() {
   // プレースホルダ（空き枠）も号証番号順に混ぜて、空行（●●）として出力する
   // （「後で来る証拠のために証拠説明書に空きを作っておく」用途）。
   const fileUnits = state.reviewFiles
-    .filter((rf) => rf.evidenceNumber && parseEvidenceNumber(rf.evidenceNumber))
+    // 番号として正しくないもの（「甲0」など）は行にしない（以前は「甲000」の行が出ていた。
+    // 出力前チェックが「番号として正しくありません」と知らせる）
+    .filter((rf) => isValidEvidenceNumber(rf.evidenceNumber))
     .map((rf) => ({ kind: "file", rf, p: parseEvidenceNumber(rf.evidenceNumber), br: rf.branchRange }));
   const phUnits = state.placeholders
     .map((ph) => ({ kind: "ph", num: ph.num, branch: ph.branch, p: parseEvidenceNumber(ph.num), br: ph.branch }))
-    .filter((u) => u.p);
+    .filter((u) => u.p && u.p.num >= 1);
   const units = [...fileUnits, ...phUnits].sort((a, b) => {
     if (a.p.sym !== b.p.sym) return a.p.sym.localeCompare(b.p.sym);
     if (a.p.num !== b.p.num) return a.p.num - b.p.num;
@@ -128,11 +130,12 @@ function buildExplanationData() {
 // file (pattern A) — the app derives it deterministically, never trusting the
 // AI's suggested_base_name for this.
 function evidenceRangeLabel(rfs) {
-  const parsed = rfs.map((rf) => parseEvidenceNumber(rf.evidenceNumber)).filter(Boolean);
+  // 番号として正しくないもの（「甲0」など）は範囲に入れない（証拠説明書の行にも出さない）
+  const parsed = rfs.map((rf) => parseEvidenceNumber(rf.evidenceNumber)).filter((p) => p && p.num >= 1);
   // 空き枠（プレースホルダ）も範囲に含める（証拠説明書に空行が出るため）
   for (const ph of state.placeholders || []) {
     const p = parseEvidenceNumber(ph.num);
-    if (p) parsed.push(p);
+    if (p && p.num >= 1) parsed.push(p);
   }
   if (!parsed.length) return "";
   const bySym = new Map();

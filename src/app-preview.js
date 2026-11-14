@@ -230,7 +230,7 @@ function pvLayoutOverlay(n) {
   }
 
   // 裁判所タイムスタンプ帯（mints提出後に出力1ページ目へ付される・実測値）を半透明表示。
-  // 帯は用紙上端からの物理位置なので pt 基準で描く（横向き画像ページ等でも正しい位置になる）。
+  // 帯は用紙の端からの物理位置なので pt 基準で描く。横向きのページでは右端に縦向きに描く。
   if (n === 1) overlay.appendChild(makeTimestampZoneEl(entry));
 
   const { stamps } = pvPageOps(pvState.file);
@@ -251,11 +251,16 @@ function makeTimestampZoneEl(entry) {
   const sc = entry.scale;
   const z = document.createElement("div");
   z.className = "pv-zone";
-  z.style.left = `${TS_LEFT_PT * sc}px`;
-  z.style.top = `${TS_TOP_PT * sc}px`;
-  z.style.width = `${entry.cssW - (TS_LEFT_PT + TS_RIGHT_MARGIN_PT) * sc}px`;
-  z.style.height = `${(TS_BOTTOM_PT - TS_TOP_PT) * sc}px`;
-  z.title = "mints では提出後、ここに裁判所のタイムスタンプが付きます（A4縦で測った位置）";
+  // 横向きのページでは、帯は右端に縦向きに付く（timestamp-zone.js の【A4横】）
+  const rect = timestampZoneRectPt(entry.cssW / sc, entry.cssH / sc);
+  z.style.left = `${rect.left * sc}px`;
+  z.style.top = `${rect.top * sc}px`;
+  z.style.width = `${rect.width * sc}px`;
+  z.style.height = `${rect.height * sc}px`;
+  z.classList.toggle("is-landscape", rect.landscape);
+  z.title = rect.landscape
+    ? "mints では提出後、ここに裁判所のタイムスタンプが付きます（横向きの紙では右端。位置は A4縦で測った値からの換算です）"
+    : "mints では提出後、ここに裁判所のタイムスタンプが付きます（A4縦で測った位置）";
   const zl = document.createElement("span");
   zl.className = "pv-zone-label";
   zl.textContent = "裁判所タイムスタンプ帯";

@@ -85,15 +85,21 @@ const EVIDENCE_SYMBOLS = "甲乙丙丁戊己庚辛壬癸弁検";
 // ファイル名を受け取れず（Gemini等は添付を「[source: N]」や空欄で扱う）、号証番号を読めずに勝手に
 // 甲へ振り直してしまう。アプリは本物のファイル名を持つので、これで号証番号を確定する。誤検出を避ける
 // ため、先頭が既知の号証記号＋数字のときだけ対象にする（「報告書3」「契約書」等は号証にしない）。
+// 枝番の部分。人が付ける「の2」「-2」に加えて、アプリ自身が付ける「_2」（甲001_2_領収書）も読む
+// （以前は読めず、アプリが出したファイルを読み直すと枝番が消えていた）。「_」のほうは、日付や年
+// （甲1_2024_契約書・甲1_20240412）や整理用の番号（甲1_123_資料）を枝番と読まないよう、2桁までで、
+// 直後が区切りか末尾のときだけ。枝番は 1 つ目か 2 つ目の括弧のどちらかに入る。
+const FILENAME_BRANCH_RE = "(?:\\s*[-‐－の／/]\\s*0*(\\d+)|[_＿]0*(\\d{1,2})(?=[\\s_＿\\-‐－・.]|$))?";
 function parseEvidenceFromFilename(name) {
   const base = String(name || "").replace(/\.[^.]+$/, "").trim()
     .replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)); // 全角数字→半角
-  const re = new RegExp(`^([${EVIDENCE_SYMBOLS}](?:[A-Za-zＡ-Ｚａ-ｚ])?)\\s*0*(\\d+)(?:\\s*[-‐－の／/]\\s*0*(\\d+))?`);
+  const re = new RegExp(`^([${EVIDENCE_SYMBOLS}](?:[A-Za-zＡ-Ｚａ-ｚ])?)\\s*0*(\\d+)${FILENAME_BRANCH_RE}`);
   const m = re.exec(base);
   if (!m) return null;
+  const br = m[3] || m[4];
   return {
     num: `${m[1]}${String(parseInt(m[2], 10)).padStart(3, "0")}`,
-    branch: !isCriminalSymbol(m[1]) && m[3] ? String(parseInt(m[3], 10)) : null, // 刑事（弁/検）は枝番なし
+    branch: !isCriminalSymbol(m[1]) && br ? String(parseInt(br, 10)) : null, // 刑事（弁/検）は枝番なし
   };
 }
 // ファイル名から、先頭の号証番号と区切り（_ - スペース等）を除いた残り＝標目の候補を返す。
@@ -101,7 +107,7 @@ function parseEvidenceFromFilename(name) {
 function titleFromFilename(name) {
   const base = String(name || "").replace(/\.[^.]+$/, "").trim();
   const half = base.replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xFEE0));
-  const re = new RegExp(`^([${EVIDENCE_SYMBOLS}](?:[A-Za-zＡ-Ｚａ-ｚ])?)\\s*0*(\\d+)(?:\\s*[-‐－の／/]\\s*0*(\\d+))?[\\s_＿\\-‐－・.]*`);
+  const re = new RegExp(`^([${EVIDENCE_SYMBOLS}](?:[A-Za-zＡ-Ｚａ-ｚ])?)\\s*0*(\\d+)${FILENAME_BRANCH_RE}[\\s_＿\\-‐－・.]*`);
   const m = re.exec(half);
   if (!m) return base;
   const rest = base.slice(m[0].length).trim(); // 長さは全角→半角でも変わらない（1文字ずつ置き換え）
@@ -111,23 +117,29 @@ function titleFromFilename(name) {
 // 氏名の姓名の間の全角スペース自体は、単語境界をアプリが推測できないためAI/プロンプト側の
 // 責務（assets/ai-prompt.md）。ここでは半角で来た値の「幅」だけを矯正する。
 function toFullWidth(s) {
-  return String(s || "")
+  return fixWaveDash(String(s || "")
     .replace(/[0-9A-Za-z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xfee0))
     .replace(/\(/g, "（")
     .replace(/\)/g, "）")
-    .replace(/ /g, "　");
+    .replace(/ /g, "　"));
 }
 function toHalfWidth(s) {
-  return String(s || "").replace(/[０-９Ａ-Ｚａ-ｚ．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  return fixWaveDash(String(s || "").replace(/[０-９Ａ-Ｚａ-ｚ．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
 }
 // ファイル名の慣行: 表示幅を抑えるため、英数字・括弧は半角（AIが全角で書いてくることがあるため矯正）。
 // ＿（全角アンダーバー U+FF3F）も同じ -0xFEE0 規則で _ になる（取りこぼしていた）。
 function toHalfWidthFilenamePart(s) {
-  return String(s || "")
+  return fixWaveDash(String(s || "")
     .replace(/[０-９Ａ-Ｚａ-ｚ＿]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
     .replace(/（/g, "(")
     .replace(/）/g, ")")
-    .replace(/　/g, " ");
+    .replace(/　/g, " "));
+}
+// 波ダッシュ（U+301C）を全角チルダ（U+FF5E）にそろえる。2 つは見た目が同じで別の文字なので、
+// AI や人が波ダッシュで書いた範囲（1〜2）がそのままファイル名・証拠説明書に入ると、検索や照合で一致しなくなる。
+// 外へ出る値（提出用ファイル名・枝番・証拠説明書の号証欄）に入る手前で直す。
+function fixWaveDash(s) {
+  return String(s == null ? "" : s).replace(/〜/g, "～");
 }
 // 号証 label for the 証拠説明書 table: 公式ひな形（フェーズ3・shouko_setsumeisho_f3.xlsx）準拠。
 // 英数字は半角・3桁ゼロ埋め・枝番は半角ハイフン。裁判文書コンテンツ＝全角の一般則の
@@ -137,7 +149,7 @@ function explanationEvidenceLabel(evidenceNumber, branch) {
   const p = parseEvidenceNumber(evidenceNumber);
   if (!p) return toHalfWidth(evidenceNumber || "");
   let s = padEvidence(p.sym, p.num);
-  const b = branch == null ? "" : toHalfWidth(String(branch).trim());
+  const b = branch == null ? "" : fixWaveDash(toHalfWidth(String(branch).trim()));
   if (b) s += `-${b}`;
   return s;
 }
@@ -334,6 +346,7 @@ function buildReviewFiles() {
   const byNameNorm = new Map(aiFiles.map((f) => [normKey(f.original_file_name), f]));
   const byNameNoExt = new Map(aiFiles.map((f) => [normKeyNoExt(f.original_file_name), f]));
   const matchedEntries = new Set(); // AI entries (by original_file_name) that matched a file
+  const defaultStamped = new Set(); // 押印の指示が無く、既定の位置を入れたファイル（path）
 
   const reviewFiles = state.files.map((f) => {
     const metadata = (f.metaFields || []).map((m) => ({ key: m.key, val: m.value, action: "delete" }));
@@ -359,8 +372,12 @@ function buildReviewFiles() {
       const stamps = aiStamps.length
         ? aiStamps
         : (rawStamps.length === 0 && entry.evidence_number ? [defaultStamp()] : []);
+      // AI が押印の指示を 1 つも書かず、アプリが既定の位置を入れたファイル（下で、枝番を押す番号にも入れる）
+      if (!aiStamps.length && stamps.length) defaultStamped.add(f.path);
       // A flagged numbered evidence with no drawing stamp = "is the number already on
       // the page?" -> offer a 押す/押さない choice that also resolves the confirmation.
+      // 押す番号の枝番（「の1～2」）も、波ダッシュを全角チルダにそろえる
+      for (const s of stamps) if (s && typeof s.branch === "string") s.branch = fixWaveDash(s.branch);
       const hasDrawing = stamps.some((s) => s && s.draw_label !== false);
       const stampAsk = !!entry.evidence_number && !!entry.needs_user_confirmation && !hasDrawing;
       return {
@@ -379,7 +396,8 @@ function buildReviewFiles() {
         overA3,
         pageCount: f.pageCount || null,
         evidenceNumber: entry.evidence_number || null,
-        branchRange: entry.branch_range || null,
+        // AI が波ダッシュで書いた範囲（1〜2）は、全角チルダにそろえる（押す番号・ファイル名・証拠説明書に入るため）
+        branchRange: typeof entry.branch_range === "string" ? (fixWaveDash(entry.branch_range) || null) : (entry.branch_range || null),
         stamps,
         stampAsk,
         stampDecided: false,
@@ -444,8 +462,26 @@ function buildReviewFiles() {
       if (!rf.kind || rf.kind === "その他") rf.kind = "証拠";
       if (!Array.isArray(rf.stamps) || rf.stamps.length === 0) rf.stamps = [defaultStamp()];
       if (rf.branchRange != null) setStampBranch(rf, rf.branchRange);
-      rf.suggested = suggestedForTitle(rf, rf.docName);
+      // AI の項目が無いファイルは、標目が元のファイル名のまま（「名前だけ整える」）のことがある。
+      // そのまま番号を前に付けると「甲001_甲1_契約書」と番号が二重になるので、番号の後ろだけを使う。
+      // 番号しか無い名前（甲1.pdf）は、番号だけの名前にする（以前は「甲001_甲1.pdf」）。
+      if (rf.matched) {
+        rf.suggested = suggestedForTitle(rf, rf.docName);
+      } else {
+        const base = rf.name.replace(/\.[^.]+$/, "").trim();
+        const rest = titleFromFilename(rf.name);
+        rf.suggested = rest === base
+          ? `${numberPrefix(rf.evidenceNumber, rf.branchRange)}${submitExtFor(rf.name)}`
+          : suggestedForTitle(rf, rest);
+      }
     }
+  }
+
+  // AI が枝番（branch_range）を書いたのに押印の指示を書かなかったファイルは、既定の位置の番号に枝番が入らず、
+  // 枝番の違うファイルがどれも「甲第5号証」と押されていた（5.5.0 の確認で指摘）。ファイルの枝番を、押す番号にも入れる。
+  // 枝番を決め終えてから行う（上で、ファイル名の番号が AI の枝番を上書きすることがあるため）。
+  for (const rf of reviewFiles) {
+    if (rf.matched && defaultStamped.has(rf.path) && rf.branchRange != null) setStampBranch(rf, rf.branchRange);
   }
 
   // 「AIを使わずに進む」（少数の追加用）: ファイル名に号証番号があるものは上でそのまま証拠になる。
@@ -570,9 +606,15 @@ function mergeDestName(num, group) {
     .filter(Boolean);
   const title = toHalfWidthFilenamePart((group[0].docName || "").trim());
   let base = num;
-  if (branches.length) {
-    const range = branches.length > 1 ? `${branches[0]}～${branches[branches.length - 1]}` : branches[0];
-    base = `${num}_${range}`;
+  if (branches.length > 1) {
+    // 枝番そのものが範囲（「1～2」）のこともあるので、全部の数字のうち最小と最大で範囲を作る
+    // （以前は先頭と末尾をつないでいて「1～2～3」「1～1」になっていた）。数字が読めなければ従来どおり。
+    const nums = branches.flatMap((b) => (b.match(/\d+/g) || []).map((d) => parseInt(d, 10)));
+    const lo = nums.length ? Math.min(...nums) : branches[0];
+    const hi = nums.length ? Math.max(...nums) : branches[branches.length - 1];
+    base = `${num}_${lo === hi ? lo : `${lo}～${hi}`}`;
+  } else if (branches.length) {
+    base = `${num}_${branches[0]}`;
   }
   return `${base}${title ? "_" + title : ""}.pdf`;
 }
@@ -582,7 +624,8 @@ function mergeDestName(num, group) {
 // v5.2.0 で、画面に見えている名前と実際の名前を一致させた）。結合する号証は従来どおり番号から作る。
 function outputDestName(num, group) {
   const single = group.length === 1 ? String(group[0].suggested || "").trim() : "";
-  if (single) return /\.pdf$/i.test(single) ? single : single.replace(/\.[^.\\/]+$/, "") + ".pdf";
+  // 人が波ダッシュで打った名前も、全角チルダにそろえて保存する
+  if (single) return fixWaveDash(/\.pdf$/i.test(single) ? single : single.replace(/\.[^.\\/]+$/, "") + ".pdf");
   return mergeDestName(num, group);
 }
 
@@ -760,6 +803,16 @@ function computeOutputIssues() {
       for (let k = min + 1; k < max; k++) if (!keys.includes(k)) missing.push(`${shortNum}の${k}`);
       if (missing.length) issues.push({ index: items[0].i, text: `${shortNum}：${missing.join("・")} がありません（枝番が飛んでいます）` });
     }
+    // 標目の違うファイルを 1 つにまとめるとき: まとめた名前は 1 つ目の枝番の標目になる（請求書と領収書 → …_請求書.pdf）。
+    // 名前は変えず、知らせるだけ（標目を直すか、「別々に出力」にするかは、人が決める）。
+    if (items.length > 1 && !state.mergeDisabled.has(num)) {
+      const group = mergeGroupFor(num);
+      const titles = [...new Set(group.map((g) => toHalfWidthFilenamePart(String(g.docName || "").trim())).filter(Boolean))];
+      if (titles.length > 1) {
+        const first = items.find((x) => x.rf === group[0]) || items[0];
+        issues.push({ index: first.i, text: `${shortNum}：標目の違うファイル（${titles.join("・")}）を1つにまとめます。まとめた名前は「${mergeDestName(num, group)}」になります` });
+      }
+    }
   }
 
   // 3) 同じ名前のファイルが2つできる（2つ目には「 (2)」が付いてしまう）
@@ -818,7 +871,7 @@ function buildOutputPlan() {
       // the 号証 stamp on 「別々に出力」 files.
       outputs.push({
         evidenceNumber: rf.evidenceNumber || null,
-        destName: rf.suggested,
+        destName: typeof rf.suggested === "string" ? fixWaveDash(rf.suggested) : rf.suggested,
         sources: [{
           srcPath: rf.path,
           pages: rf.pageRange || null,

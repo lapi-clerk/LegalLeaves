@@ -190,14 +190,29 @@ class Api:
             return "許可されていないパスです"
         return winutil.open_path(path)
 
+    def take_open_request(self):
+        """確認画面から開く入口（--open。open_entry.py）で渡されたものを、画面が起動時に 1 回だけ受け取る。
+        ファイルは、人が選んだときと同じ決まりで受け付ける。無ければ None。"""
+        req, self._app._open_request = self._app._open_request, None
+        if not req:
+            return None
+        reg = self._app._session.register_paths(req["paths"])
+        return {
+            "accepted": reg["accepted"], "rejected": reg["rejected"],
+            "aiText": req["planText"],
+            "folderName": os.path.basename(req["folder"].rstrip("\\/")) or req["folder"],
+            "skipped": req["skipped"],
+        }
+
     def open_case_file(self):
         # 停止中: 案件ファイル（作業の保存・再開）は使わない。画面のボタンも隠してある。
         return {"error": "「前回の作業を開く」は現在停止しています。"}
 
 
 class App:
-    def __init__(self):
+    def __init__(self, open_request=None):
         self._session = service.Session()
+        self._open_request = open_request  # 確認画面から開く入口（--open）で渡されたもの。画面が 1 回だけ受け取る
         self._token = secrets.token_urlsafe(32)
         self._window = None
         self._dirty = False
@@ -347,4 +362,20 @@ def main():
             sys.stdout.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError):
             pass
+    if "--check" in sys.argv[1:]:
+        # 点検する（窓を出さずに、結果を JSON に書いて終わる。check.py）
+        from . import check
+        sys.exit(check.main(sys.argv[1:]))
+    if "--mcp" in sys.argv[1:]:
+        # MCP の窓口（AI のアプリから「点検する」を道具として呼ぶ。窓を出さない。mcp_server.py）
+        from . import mcp_server
+        sys.exit(mcp_server.main(sys.argv[1:]))
+    if "--open" in sys.argv[1:]:
+        # 確認画面から開く（読み込みと貼り付けを済ませた状態で窓を開く。書き出しは人が画面で行う。open_entry.py）
+        from . import open_entry
+        req = open_entry.main(sys.argv[1:])
+        if not isinstance(req, dict):
+            sys.exit(req)
+        App(open_request=req).run()
+        return
     App().run()

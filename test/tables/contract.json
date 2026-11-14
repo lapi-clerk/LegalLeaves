@@ -1,0 +1,941 @@
+{
+  "title": "AI の整理データの上限・証拠説明書との突き合わせ・提出者側と記号の食い違い",
+  "kind": "function",
+  "cases": [
+    {
+      "name": "上限: 通常のデータは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "original_file_name": "甲1_契約書.pdf",
+              "title": "契約書",
+              "evidence_number": "甲001",
+              "proof_purpose": {
+                "$repeat": [
+                  "本件契約の成立を立証する。",
+                  30
+                ]
+              },
+              "stamps": [
+                {
+                  "page": 1,
+                  "branch": null,
+                  "draw_label": true,
+                  "rotate_degrees": 0,
+                  "position": {
+                    "x": 0.93,
+                    "y": 0.07,
+                    "anchor": "top-right"
+                  }
+                }
+              ]
+            },
+            {
+              "original_file_name": "訴状.docx",
+              "title": "訴状",
+              "evidence_number": null,
+              "stamps": []
+            }
+          ],
+          "warnings": [
+            "確認してください"
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: 300件のファイルは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": {
+            "$array": [
+              {
+                "original_file_name": "甲.pdf"
+              },
+              300
+            ]
+          }
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: ファイル1000件ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": {
+            "$array": [
+              {},
+              1000
+            ]
+          }
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: ファイル1001件は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": {
+            "$array": [
+              {},
+              1001
+            ]
+          }
+        }
+      ],
+      "expect": "ファイルの件数が多すぎます（1001件・1000件まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: 警告200件ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [],
+          "warnings": {
+            "$array": [
+              "x",
+              200
+            ]
+          }
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: 警告201件は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [],
+          "warnings": {
+            "$array": [
+              "x",
+              201
+            ]
+          }
+        }
+      ],
+      "expect": "警告の件数が多すぎます（200件まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: files に null",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            null
+          ]
+        }
+      ],
+      "expect": "データの形式が正しくありません（1件目のファイルの情報が読み取れません）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: files に数値",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {},
+            123
+          ]
+        }
+      ],
+      "expect": "データの形式が正しくありません（2件目のファイルの情報が読み取れません）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: files に配列",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            []
+          ]
+        }
+      ],
+      "expect": "データの形式が正しくありません（1件目のファイルの情報が読み取れません）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ファイル名1000文字ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "original_file_name": {
+                "$repeat": [
+                  "あ",
+                  1000
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: ファイル名1001文字は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "original_file_name": {
+                "$repeat": [
+                  "あ",
+                  1001
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルの項目が長すぎます（1000文字まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: 作成年月日1001文字は弾く（3件目）",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {},
+            {},
+            {
+              "created_date": {
+                "$repeat": [
+                  "1",
+                  1001
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "3件目のファイルの項目が長すぎます（1000文字まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: 立証趣旨4000文字ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "proof_purpose": {
+                "$repeat": [
+                  "あ",
+                  4000
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: 立証趣旨4001文字は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "proof_purpose": {
+                "$repeat": [
+                  "あ",
+                  4001
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルの文章が長すぎます（4000文字まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: 確認の質問4001文字は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "confirmation_question": {
+                "$repeat": [
+                  "あ",
+                  4001
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルの文章が長すぎます（4000文字まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: 長い項目が文字列でなければ見ない",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "title": 12345,
+              "proof_purpose": [
+                "配列"
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: stamps が配列でない",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": {
+                "page": 1
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "データの形式が正しくありません（1件目のファイルの押印指示が読み取れません）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: stamps が null は通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": null
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: stamps の要素が null は通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                null
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: stamps の要素が数値",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                42
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": "データの形式が正しくありません（1件目のファイルの押印指示が読み取れません）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: stamps 500件ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": {
+                "$array": [
+                  {
+                    "page": 1
+                  },
+                  500
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: stamps 501件は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": {
+                "$array": [
+                  {
+                    "page": 1
+                  },
+                  501
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルの押印指示が多すぎます（501件・500件まで）。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ページ番号が負",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": -5
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルのページ番号が正しくありません。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ページ番号が0",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルのページ番号が正しくありません。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ページ番号100000ちょうどは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": 100000
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: ページ番号100001は弾く",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": 100001
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルのページ番号が正しくありません。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ページ番号が文字列",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": "1件目のファイルのページ番号が正しくありません。AIの整理データが壊れている可能性があります。AIの出力をそのまま貼り付け直してください。"
+    },
+    {
+      "name": "上限: ページ番号が小数は通す（後段で扱う）",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "page": 1.5
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "上限: ページ番号なしは通す",
+      "fn": "checkAiLimits",
+      "args": [
+        {
+          "files": [
+            {
+              "stamps": [
+                {
+                  "draw_label": true
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "突き合わせ: 証拠説明書が無ければ調べない",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        null
+      ],
+      "expect": null
+    },
+    {
+      "name": "突き合わせ: exists が偽なら調べない",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": false,
+          "first_evidence_number": "甲001",
+          "last_evidence_number": "甲002"
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "突き合わせ: 過不足なし",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "甲002"
+          }
+        ],
+        {
+          "exists": true,
+          "file_name": "証拠説明書.pdf",
+          "first_evidence_number": "甲1",
+          "last_evidence_number": "甲2"
+        }
+      ],
+      "expect": {
+        "fileName": "証拠説明書.pdf",
+        "range": "甲1\u301c甲2",
+        "issues": []
+      }
+    },
+    {
+      "name": "突き合わせ: 不足（甲003・甲004）",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "甲002"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲1",
+          "last_evidence_number": "甲004"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": "甲1\u301c甲004",
+        "issues": [
+          "証拠説明書は 甲1\u301c甲004 を記載していますが、次の証拠ファイルが見当たりません: 甲003、甲004"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 範囲外（甲005・乙001）",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "甲005"
+          },
+          {
+            "evidenceNumber": "乙001"
+          },
+          {
+            "evidenceNumber": null
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲001",
+          "last_evidence_number": "甲002"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": "甲001\u301c甲002",
+        "issues": [
+          "証拠説明書は 甲001\u301c甲002 を記載していますが、次の証拠ファイルが見当たりません: 甲002",
+          "証拠説明書の範囲外の証拠ファイルがあります: 甲005、乙001"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 枝番の違う同じ番号は1つと数える",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001",
+            "branchRange": "1"
+          },
+          {
+            "evidenceNumber": "甲001",
+            "branchRange": "2"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲001",
+          "last_evidence_number": "甲001"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": "甲001\u301c甲001",
+        "issues": []
+      }
+    },
+    {
+      "name": "突き合わせ: 範囲が広すぎる",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲1",
+          "last_evidence_number": "甲999999999"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": "甲1\u301c甲999999999",
+        "issues": [
+          "証拠説明書の番号範囲（甲1\u301c甲999999999）が広すぎるため、不足・範囲外の突き合わせはスキップしました。番号の記載をご確認ください。"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 2000件ちょうどは調べる",
+      "fn": "computeConsistency",
+      "args": [
+        [],
+        {
+          "exists": true,
+          "first_evidence_number": "甲1",
+          "last_evidence_number": "甲2000"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": "甲1\u301c甲2000",
+        "issues": [
+          "証拠説明書は 甲1\u301c甲2000 を記載していますが、次の証拠ファイルが見当たりません: 甲001、甲002、甲003、甲004、甲005、甲006、甲007、甲008、甲009、甲010、甲011、甲012、甲013、甲014、甲015、甲016、甲017、甲018、甲019、甲020、甲021、甲022、甲023、甲024、甲025、甲026、甲027、甲028、甲029、甲030、甲031、甲032、甲033、甲034、甲035、甲036、甲037、甲038、甲039、甲040、甲041、甲042、甲043、甲044、甲045、甲046、甲047、甲048、甲049、甲050 …ほか1950件"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 最初と最後の記号が違う",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲001",
+          "last_evidence_number": "乙003"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": null,
+        "issues": [
+          "証拠説明書の番号範囲を読み取れなかったため、範囲の突き合わせはスキップしました。"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 最初が最後より大きい",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲005",
+          "last_evidence_number": "甲003"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": null,
+        "issues": [
+          "証拠説明書の番号範囲を読み取れなかったため、範囲の突き合わせはスキップしました。"
+        ]
+      }
+    },
+    {
+      "name": "突き合わせ: 範囲の記載が無い",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": true,
+          "file_name": "証拠説明書.pdf",
+          "first_evidence_number": null,
+          "last_evidence_number": null
+        }
+      ],
+      "expect": {
+        "fileName": "証拠説明書.pdf",
+        "range": null,
+        "issues": []
+      }
+    },
+    {
+      "name": "突き合わせ: 範囲が読めない",
+      "fn": "computeConsistency",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "exists": true,
+          "first_evidence_number": "甲第1号証",
+          "last_evidence_number": "甲第3号証"
+        }
+      ],
+      "expect": {
+        "fileName": null,
+        "range": null,
+        "issues": [
+          "証拠説明書の番号範囲を読み取れなかったため、範囲の突き合わせはスキップしました。"
+        ]
+      }
+    },
+    {
+      "name": "記号: 原告なのに乙",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          },
+          {
+            "evidenceNumber": "乙002"
+          },
+          {
+            "evidenceNumber": "乙002"
+          },
+          {
+            "evidenceNumber": "乙003"
+          }
+        ],
+        {
+          "party": "原告"
+        }
+      ],
+      "expect": [
+        "提出者側は「原告」のため、証拠番号は通常「甲」号証です（甲A・甲Bなどの系列も同様）。異なる記号の番号が含まれています: 乙002、乙003 — 号証記号の指定間違い（言い間違い）でないかご確認ください。"
+      ]
+    },
+    {
+      "name": "記号: 被告で乙は正しい",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "乙001"
+          }
+        ],
+        {
+          "party": "被告"
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "記号: 申立人は甲",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "乙001"
+          }
+        ],
+        {
+          "party": "申立人"
+        }
+      ],
+      "expect": [
+        "提出者側は「申立人」のため、証拠番号は通常「甲」号証です（甲A・甲Bなどの系列も同様）。異なる記号の番号が含まれています: 乙001 — 号証記号の指定間違い（言い間違い）でないかご確認ください。"
+      ]
+    },
+    {
+      "name": "記号: 相手方は乙",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲001"
+          }
+        ],
+        {
+          "party": "相手方"
+        }
+      ],
+      "expect": [
+        "提出者側は「相手方」のため、証拠番号は通常「乙」号証です（甲A・甲Bなどの系列も同様）。異なる記号の番号が含まれています: 甲001 — 号証記号の指定間違い（言い間違い）でないかご確認ください。"
+      ]
+    },
+    {
+      "name": "記号: 甲A は原告側として扱う",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "甲A001"
+          },
+          {
+            "evidenceNumber": "甲B002"
+          }
+        ],
+        {
+          "party": "原告"
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "記号: 提出者側が分からなければ調べない",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "乙001"
+          }
+        ],
+        {
+          "party": "参加人"
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "記号: 事件の情報が無ければ調べない",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": "乙001"
+          }
+        ],
+        null
+      ],
+      "expect": []
+    },
+    {
+      "name": "記号: 番号の無いファイルは数えない",
+      "fn": "computePartySymbolWarnings",
+      "args": [
+        [
+          {
+            "evidenceNumber": null
+          },
+          {
+            "evidenceNumber": "読めない"
+          }
+        ],
+        {
+          "party": "原告"
+        }
+      ],
+      "expect": []
+    }
+  ]
+}

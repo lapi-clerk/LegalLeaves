@@ -42,6 +42,7 @@ const state = {
   aiEntries: [], // all parsed AI file entries (for the manual-assign dropdown)
   consistency: null, // v3 pattern-A: 証拠説明書 vs actual evidence files check result
   excludedFiles: [], // 確認画面の「ファイルごと除外」で外したファイル（「編集をすべて取り消す」で復元）
+  openedFrom: null, // 外から開いたとき（--open）の情報 { folderName, count, skipped }。知らせに使う
   matchSkipped: false, // 照合で対応すべきことが無く、照合画面を飛ばして確認へ来たか
   splitPagesFor: null, // 「ページで枝番に分ける」入力欄を開いたときの対象（別ファイルへ切り替えたら閉じる）
   placeholders: [], // 「後で追加予定」の空き号証番号（例 "甲002"）。セッション内のみ・ファイルにその番号が付くと自動で消える

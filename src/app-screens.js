@@ -5,9 +5,13 @@
 // ---------------------------------------------------------------------------
 
 function goStep(step) {
+  const changed = state.step !== step;
   state.step = step;
   showScreen(step);
   update();
+  // 別の画面へ移ったら、いちばん上から見せる（前の画面で下までスクロールしていると、移った先の上にある
+  // 出力前チェックの知らせなどが見えないまま始まってしまう。5.4.6 の試用で指摘）
+  if (changed && typeof window !== "undefined" && typeof window.scrollTo === "function") window.scrollTo(0, 0);
 }
 
 function advanceStep(step) {

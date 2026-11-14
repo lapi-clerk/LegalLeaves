@@ -15,10 +15,15 @@
 //   ・上端から 8〜19mm
 //   ・左 31mm 〜 右端から 11mm
 //
-// 【未確認】A4横・A3縦・A3横（2026-07-27時点）
+// 【A4横】利用者の実提出での観察（2026-11-12 に聞いた。数値は測っていない）
+//   ・帯は、時計回りに 90 度回した形で、紙の**右端**に縦向きに付く
+//     （≒先に A4縦とみなして帯を付け、全体を時計回りに 90 度回した形）
+//   ・この見立てどおりなら: 右端から 8〜19mm、上端から 31mm 〜 下端から 11mm
+//   ・**数値は A4縦からの換算**で、横の紙では測っていない。timestampZoneRectPt() がこの換算をする
+//
+// 【未確認】A3縦・A3横
 //   これらの用紙で提出した実績がまだ無く、帯がどこに入るか分かっていない。
-//   考えられるのは (a) 用紙の向きに関わらず上端から物理的に同じ位置(8〜19mm)、
-//   (b) 用紙サイズに比例した位置、(c) それ以外。**(a) と決めつけないこと。**
+//   いまは、縦なら A4縦と同じ長さの位置、横なら A4横と同じ長さの位置に描いている（決めつけないこと）。
 //
 //   → 測り方と必要な数値は docs/timestamp-band-measurement.md にまとめてある。
 // ===========================================================================
@@ -47,11 +52,32 @@ const TS_LEFT_PT = TIMESTAMP_ZONE.x0 * A4_PT.w;                // 帯 左端 ≈
 const TS_RIGHT_MARGIN_PT = (1 - TIMESTAMP_ZONE.x1) * A4_PT.w;  // 帯 右余白 ≈31pt（11mm）
 const IMG_NUMBER_TOP_PT = STAMP_SAFE_Y * A4_PT.h;              // 画像の番号ボックス上端 ≈58.9pt（20.8mm）
 
+// 帯の場所（pt。左上が原点）。横向きのページ（幅 > 高さ）では、右端に縦向きに付く（上の【A4横】）。
+// 表示用。確認画面の「帯と重なりそう」の知らせは、まだ縦のページの形（上端）だけを見ている。
+function timestampZoneRectPt(pageW, pageH) {
+  if (pageW > pageH) {
+    return {
+      landscape: true,
+      left: pageW - TS_BOTTOM_PT,
+      top: TS_LEFT_PT,
+      width: TS_BOTTOM_PT - TS_TOP_PT,
+      height: pageH - TS_LEFT_PT - TS_RIGHT_MARGIN_PT,
+    };
+  }
+  return {
+    landscape: false,
+    left: TS_LEFT_PT,
+    top: TS_TOP_PT,
+    width: pageW - TS_LEFT_PT - TS_RIGHT_MARGIN_PT,
+    height: TS_BOTTOM_PT - TS_TOP_PT,
+  };
+}
+
 // Node（main プロセス）から require されたときだけエクスポートする。
 // レンダラーではクラシックスクリプトとして読み込まれ、上の定数がそのままグローバルになる。
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     TIMESTAMP_ZONE, STAMP_SAFE_Y, A4_PT,
-    TS_TOP_PT, TS_BOTTOM_PT, TS_LEFT_PT, TS_RIGHT_MARGIN_PT, IMG_NUMBER_TOP_PT,
+    TS_TOP_PT, TS_BOTTOM_PT, TS_LEFT_PT, TS_RIGHT_MARGIN_PT, IMG_NUMBER_TOP_PT, timestampZoneRectPt,
   };
 }

@@ -47,6 +47,7 @@
   window.api = {
     getInitialOutputState: () => call("get_initial_output_state"),
     selectPdfFiles: () => call("select_pdf_files"),
+    takeOpenRequest: () => call("take_open_request"),
     selectOutputFolder: (currentPath) => call("select_output_folder", currentPath || ""),
     registerDroppedPdfFiles: (files) => call("register_dropped_files", (files || []).length),
     resolveDroppedOutputPath: (file) => (file ? call("resolve_dropped_output_path") : null),

@@ -481,6 +481,8 @@ const srcPv = { task: null, seq: 0, observer: null, opening: null, pages: {}, ov
 
 // 画像を出力と同じ A4 の紙面に置いた見本（pdf_engine.py の _image_page_pdf と同じ寸法）。
 const IMG_PAGE_MARGIN_PT = 34;
+// 横向きの紙では右の余白を広げ、右端に付くタイムスタンプ帯を避ける（pdf_engine.py の IMG_LANDSCAPE_RIGHT_MARGIN_PT と同じ値）
+const IMG_PAGE_LANDSCAPE_RIGHT_PT = 62;
 const IMG_PAGE_TOP_BAND_PT = 80;
 function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -497,12 +499,13 @@ async function drawImageAsPage(url, canvas, width) {
   const landscape = rw > rh;
   const pw = landscape ? A4_PT.h : A4_PT.w;
   const ph = landscape ? A4_PT.w : A4_PT.h;
-  const availW = pw - IMG_PAGE_MARGIN_PT * 2;
+  const rightPt = landscape ? Math.max(IMG_PAGE_MARGIN_PT, IMG_PAGE_LANDSCAPE_RIGHT_PT) : IMG_PAGE_MARGIN_PT;
+  const availW = pw - IMG_PAGE_MARGIN_PT - rightPt;
   const availH = ph - IMG_PAGE_MARGIN_PT - IMG_PAGE_TOP_BAND_PT;
   const k = Math.min(availW / rw, availH / rh);
   const dw = rw * k;
   const dh = rh * k;
-  const left = (pw - dw) / 2;
+  const left = IMG_PAGE_MARGIN_PT + (availW - dw) / 2;
   const top = ph - (IMG_PAGE_MARGIN_PT + (availH - dh) / 2) - dh; // PDF は下から測るので上からに直す
   const scale = width / pw; // 1pt あたりの px
   const cssW = Math.floor(pw * scale);

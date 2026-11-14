@@ -594,6 +594,8 @@ $("open-folder-btn").addEventListener("click", () => {
 
 $("done-restart-btn").addEventListener("click", () => {
   state.maxReachedIndex = 0;
+  state.openedFrom = null; // 新しい作業は、人が自分で入れるもの
+  renderOutsideOpenNote();
   state.aiText = "";
   state.aiJsonError = "";
   state.aiCardCollapsed = false;
@@ -715,4 +717,107 @@ if (window.matchMedia) {
   }
   showScreen(state.step);
   update();
+  await applyOpenRequest();
 })();
+
+// ---------- 右クリックのメニュー（コピー・貼り付け） ----------
+// この窓には、ブラウザの右クリックのメニューが出ない。文字を選んで右クリックしたときに「コピー」を、
+// 入力欄では「貼り付け」も出す（Ctrl+C・Ctrl+V を知らなくても、確認事項の文などを写せるように）。
+function closeContextMenu() {
+  const m = document.getElementById("ctx-menu");
+  if (m) m.remove();
+}
+function contextMenuItem(label, onPick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "ctx-menu-item";
+  b.textContent = label;
+  // 押した瞬間に選択が外れないよう、mousedown では何もしない（click で実行する）
+  b.addEventListener("mousedown", (e) => e.preventDefault());
+  b.addEventListener("click", () => { closeContextMenu(); onPick(); });
+  return b;
+}
+document.addEventListener("contextmenu", (e) => {
+  closeContextMenu();
+  const el = e.target;
+  const isField = el && (el.tagName === "TEXTAREA" ||
+    (el.tagName === "INPUT" && /^(text|search|url|tel|email|number|)$/i.test(el.getAttribute("type") || "")));
+  const editable = isField && !el.readOnly && !el.disabled;
+  let selected = "";
+  if (isField && typeof el.selectionStart === "number") {
+    selected = el.value.substring(el.selectionStart, el.selectionEnd);
+  } else {
+    selected = String(window.getSelection ? window.getSelection() : "");
+  }
+  const items = [];
+  if (selected.trim()) items.push(contextMenuItem("コピー", () => window.api.writeClipboardText(selected)));
+  if (editable) {
+    items.push(contextMenuItem("貼り付け", async () => {
+      const text = await window.api.readClipboardText();
+      if (!text) return;
+      el.focus();
+      el.setRangeText(text, el.selectionStart, el.selectionEnd, "end");
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }));
+  }
+  if (!items.length) return;
+  e.preventDefault();
+  const menu = document.createElement("div");
+  menu.id = "ctx-menu";
+  menu.className = "ctx-menu";
+  menu.setAttribute("role", "menu");
+  items.forEach((b) => menu.appendChild(b));
+  document.body.appendChild(menu);
+  // 窓の外へはみ出さない位置に置く
+  const x = Math.min(e.clientX, window.innerWidth - menu.offsetWidth - 8);
+  const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.left = `${Math.max(4, x)}px`;
+  menu.style.top = `${Math.max(4, y)}px`;
+});
+document.addEventListener("mousedown", (e) => {
+  const m = document.getElementById("ctx-menu");
+  if (m && !m.contains(e.target)) closeContextMenu();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeContextMenu(); });
+window.addEventListener("blur", closeContextMenu);
+window.addEventListener("scroll", closeContextMenu, true);
+
+// 確認画面から開く入口（--open）で渡されたものを、起動時に 1 回だけ受け取る。
+// 人が「ファイルを入れる → 整理データを貼り付ける → 照合して進む」をしたときと同じ処理を、同じ順に呼ぶ
+// （別の読み込み経路を作らない。整理データの検査も、進めるかどうかの判定も、人のときと同じもの）。
+async function applyOpenRequest() {
+  let req = null;
+  try {
+    req = await window.api.takeOpenRequest();
+  } catch (e) {
+    return;
+  }
+  if (!req) return;
+  const accepted = req.accepted || [];
+  const rejected = req.rejected || [];
+  state.openedFrom = { folderName: req.folderName || "", count: accepted.length, skipped: req.skipped || [] };
+  renderOutsideOpenNote();
+  hideUnsupportedWarning();
+  if (accepted.length) await addFiles(accepted);
+  if (rejected.length) renderUnsupportedWarning(rejected);
+  state.aiText = String(req.aiText || "");
+  $("ai-textarea").value = state.aiText;
+  validateAiJson();
+  if (!state.aiJsonError) state.aiCardCollapsed = true;
+  update();
+  // 「照合して進む」が押せる状態のときだけ、押す（押せないときは、読み込み画面で止まって理由が見える）
+  const btn = $("to-match-btn");
+  if (!btn.disabled) btn.click();
+}
+
+function renderOutsideOpenNote() {
+  const note = $("outside-open-note");
+  const o = state.openedFrom;
+  note.hidden = !o;
+  if (!o) return;
+  const skippedCount = o.skipped.reduce((n, s) => n + (s.files || 0), 0);
+  note.textContent =
+    `AI のアプリなど、外から開きました。フォルダ「${o.folderName}」の ${o.count} 件を読み込み、整理データを貼り付けた状態です。` +
+    "内容は、まだ人が確かめていない下書きです。いつもどおり確かめてから書き出してください。" +
+    (skippedCount ? `（前に書き出した「提出用ファイル」のフォルダの ${skippedCount} 件は、読み込んでいません。）` : "");
+}

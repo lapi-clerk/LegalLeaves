@@ -29,6 +29,9 @@ Electron 版のコード（main.js・pdf-engine.js 等）は、実機確認を�
 | `legalleaves/storage.py` | メモ・履歴・設定（`%APPDATA%\legal-leaves\data`。Electron 版と同じ場所） | main.js |
 | `legalleaves/fileio.py` | 壊れた出力を残さない書き込み | file-io.js |
 | `legalleaves/winutil.py` | クリップボード・確認ダイアログ・フォルダを開く | Electron の clipboard / dialog / shell |
+| `legalleaves/core/` | 判定（表記と番号の読み取り・整理データの検査・照合・出力前チェック・出力の計画・証拠説明書のデータ）。画面（`src/app-*.js`）にも同じ判定があり、同じ表（`test/tables/`）で結果をそろえている | — |
+| `legalleaves/check.py` | 点検する（`--check`）。窓を出さずに、整理データとフォルダを突き合わせた結果を JSON に書く（`docs/check-entry.md`） | — |
+| `legalleaves/mcp_server.py` | MCP の窓口（`--mcp`）。AI のアプリから「点検する」を道具として呼ぶ。書き出す道具は出さない（`docs/mcp.md`） | — |
 | `legalleaves/selftest.py` | 開発用の自己点検（実際の窓で画面の関数を動かす） | — |
 | `legalleaves/engine_cli.py` | テスト用の入口（`npm test` の JS のテストから Python の処理を呼ぶ） | — |
 | `packaging/` | PyInstaller の設定・NSIS のインストーラ・作成手順（build.ps1）・ライセンス表示の作成（make_notices.py） | package.json の build |
